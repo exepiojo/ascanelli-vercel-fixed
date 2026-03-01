@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Fondo rojo redondeado -->
+  <rect width="256" height="256" rx="40" fill="#DC3545"/>
+  
+  <!-- Águila simplificada -->
+  <g transform="translate(128, 128)">
+    <!-- Cabeza -->
+    <circle cx="0" cy="-40" r="25" fill="white"/>
+    
+    <!-- Ojo -->
+    <circle cx="-8" cy="-45" r="4" fill="#DC3545"/>
+    
+    <!-- Pico -->
+    <polygon points="15,-38 30,-40 15,-35" fill="white"/>
+    
+    <!-- Cuerpo -->
+    <ellipse cx="0" cy="10" rx="35" ry="45" fill="white"/>
+    
+    <!-- Alas -->
+    <path d="M -30 10 Q -60 0 -50 50 Q -40 40 -25 45" fill="white"/>
+    <path d="M 30 10 Q 60 0 50 50 Q 40 40 25 45" fill="white"/>
+    
+    <!-- Cola -->
+    <path d="M -20 50 L -30 80 L 0 75 L 30 80 L 20 50" fill="white"/>
+  </g>
+  
+  <!-- Texto ASCANELLI -->
+  <text x="128" y="220" font-size="24" font-weight="bold" fill="white" text-anchor="middle" font-family="Arial, sans-serif">ASCANELLI</text>
+</svg>

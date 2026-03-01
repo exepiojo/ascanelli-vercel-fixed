@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Solicitar Modificación de Pedido{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Solicitar Modificación de Pedido</h2>
+                <a href="{{ url_for('admin_ventas') }}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Volver a Ventas
+                </a>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="card-title">Información del Pedido</h4>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Pedido:</strong> {{ pedido.pedido }}</p>
+                            <p><strong>Cliente:</strong> {{ pedido.cliente }}</p>
+                            <p><strong>Modelo:</strong> {{ pedido.modelo }}</p>
+                            <p><strong>Implemento:</strong> {{ pedido.implemento }}</p>
+                            <p><strong>Estado:</strong> 
+                                <span class="badge bg-info text-white">
+                                    {{ pedido.estado }}
+                                </span>
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Chasis Actual</h5>
+                            {% if pedido.chasis_asignado %}
+                                <p><strong>Número:</strong> {{ pedido.chasis_asignado.nro_chasis }}</p>
+                                <p><strong>Modelo:</strong> {{ pedido.chasis_asignado.modelo }}</p>
+                                <p><strong>Cliente:</strong> {{ pedido.chasis_asignado.cliente }}</p>
+                            {% else %}
+                                <p class="text-muted">No tiene chasis asignado</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <form method="POST">
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <label for="motivo">
+                                        <i class="bi bi-chat-left-text"></i> Motivo de la Modificación:
+                                    </label>
+                                    <textarea class="form-control" id="motivo" name="motivo" rows="4" required
+                                              placeholder="Especifique el motivo de la modificación solicitada..."></textarea>
+                                    <small class="form-text text-muted">
+                                        Describa detalladamente qué necesita modificar del pedido actual
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="alert alert-info">
+                                <h6><i class="bi bi-info-circle"></i> Información Importante:</h6>
+                                <ul class="mb-0">
+                                    <li>Esta solicitud será revisada por el departamento de PCP</li>
+                                    <li>PCP evaluará la factibilidad de la modificación</li>
+                                    <li>Si es aprobada, PCP desasignará el chasis actual</li>
+                                    <li>Posteriormente, PCP asignará un nuevo chasis según sus requerimientos</li>
+                                    <li>Podrá ver el estado de su solicitud en la lista de pedidos</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-warning">
+                                <i class="bi bi-send"></i> Enviar Solicitud de Modificación
+                            </button>
+                            <a href="{{ url_for('admin_ventas') }}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

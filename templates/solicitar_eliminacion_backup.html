@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Solicitar Eliminación de Pedido{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Solicitar Eliminación de Pedido</h2>
+                <a href="{{ url_for('admin_ventas') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Volver a Ventas
+                </a>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="card-title">Información del Pedido</h4>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Pedido:</strong> {{ pedido.pedido }}</p>
+                            <p><strong>Cliente:</strong> {{ pedido.cliente }}</p>
+                            <p><strong>Modelo:</strong> {{ pedido.modelo }}</p>
+                            <p><strong>Estado:</strong> 
+                                <span class="badge badge-{{ 'warning' if pedido.estado == 'ASIGNADO' else 'info' }}">
+                                    {{ pedido.estado.replace('_', ' ') }}
+                                </span>
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Chasis Asignado</h5>
+                            <p><strong>Número:</strong> {{ chasis_asignado.nro_chasis }}</p>
+                            <p><strong>Modelo:</strong> {{ chasis_asignado.modelo }}</p>
+                            <p><strong>Cliente:</strong> {{ chasis_asignado.cliente }}</p>
+                            <p><strong>Tubo:</strong> {{ chasis_asignado.tubo or 'N/A' }}</p>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <form method="POST">
+                        <div class="form-group">
+                            <label for="motivo">
+                                <i class="fas fa-exclamation-triangle"></i> Motivo de la Eliminación:
+                            </label>
+                            <textarea class="form-control" id="motivo" name="motivo" rows="4" required
+                                      placeholder="Especifique el motivo de la eliminación del pedido..."></textarea>
+                            <small class="form-text text-muted">
+                                Describa por qué necesita eliminar este pedido (ej: caída de ventas, cancelación del cliente, etc.)
+                            </small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="alert alert-warning">
+                                <h6><i class="fas fa-exclamation-triangle"></i> Información Importante:</h6>
+                                <ul class="mb-0">
+                                    <li>Esta solicitud será revisada por el departamento de PCP</li>
+                                    <li>PCP evaluará el impacto de la eliminación en la producción</li>
+                                    <li>Si se aprueba, PCP desasignará el chasis del pedido</li>
+                                    <li>Una vez desasignado, podrá eliminar el pedido definitivamente</li>
+                                    <li>El chasis quedará disponible para otros pedidos</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="alert alert-danger">
+                                <h6><i class="fas fa-trash"></i> Advertencia:</h6>
+                                <p class="mb-0">
+                                    <strong>Esta acción no se puede deshacer.</strong> Una vez que PCP apruebe la eliminación 
+                                    y desasigna el chasis, el pedido quedará disponible para eliminación definitiva.
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash"></i> Solicitar Eliminación
+                            </button>
+                            <a href="{{ url_for('admin_ventas') }}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

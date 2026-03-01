@@ -1,0 +1,1400 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel PCP - Ascanelli</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <link rel="shortcut icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .pcp-header {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+            color: white;
+            padding: 20px 0;
+            box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
+        }
+        .card-stats {
+            border-radius: 15px;
+            border: none;
+            transition: transform 0.3s ease;
+        }
+        .card-stats:hover {
+            transform: translateY(-5px);
+        }
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+        .pedido-card {
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+        .pedido-card:hover {
+            transform: scale(1.02);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        .border-pendiente { border-left-color: #ffc107; }
+        .border-asignado { border-left-color: #17a2b8; }
+        .border-produccion { border-left-color: #007bff; }
+        .border-completado { border-left-color: #28a745; }
+        .chasis-disponible {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .chasis-disponible:hover {
+            background-color: #e3f2fd;
+            transform: scale(1.02);
+        }
+        .chasis-asignado {
+            opacity: 0.6;
+            background-color: #f5f5f5;
+        }
+        .estado-badge {
+            font-size: 0.8rem;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+        .urgencia-alta {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+        }
+    </style>
+</head>
+<body>
+    <header class="pcp-header">
+        <div class="container d-flex justify-content-between align-items-center">
+            <div>
+                <h4 class="mb-0">📋 PANEL PCP</h4>
+                <small class="opacity-75">Planificación y Control de Producción</small>
+            </div>
+            <div class="text-end">
+                <a href="/admin/seleccion" class="btn btn-outline-light btn-sm fw-bold me-2">← Volver</a>
+                <button class="btn btn-light btn-sm fw-bold" onclick="location.reload()">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Actualizar
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mt-4">
+        <!-- Tarjetas de Estadísticas -->
+        <div class="row mb-4">
+            <!-- Pedidos por Asignar -->
+            <div class="col-md-3 mb-3">
+                <div class="card card-stats bg-warning text-white">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="stat-icon bg-white bg-opacity-25 me-3">
+                                <i class="bi bi-hourglass-split"></i>
+                            </div>
+                            <div>
+                                <h3 class="mb-0">{{ pedidos_pendientes_count }}</h3>
+                                <small>Pedidos por Asignar</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Solicitudes de Modificación -->
+            <div class="col-md-3 mb-3">
+                <div class="card card-stats bg-warning text-dark">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="stat-icon bg-white bg-opacity-25 me-3">
+                                <i class="bi bi-pencil-square"></i>
+                            </div>
+                            <div>
+                                <h3 class="mb-0">{{ modificacion_solicitada_count }}</h3>
+                                <small>Modificaciones Solicitadas</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Solicitudes de Eliminación -->
+            <div class="col-md-3 mb-3">
+                <div class="card card-stats bg-secondary text-white">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="stat-icon bg-white bg-opacity-25 me-3">
+                                <i class="bi bi-exclamation-triangle"></i>
+                            </div>
+                            <div>
+                                <h3 class="mb-0">{{ eliminacion_solicitada_count }}</h3>
+                                <small>Eliminaciones Solicitadas</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Urgentes -->
+            <div class="col-md-3 mb-3">
+                <div class="card card-stats bg-danger text-white urgencia-alta">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="stat-icon bg-white bg-opacity-25 me-3">
+                                <i class="bi bi-exclamation-triangle-fill"></i>
+                            </div>
+                            <div>
+                                <h3 class="mb-0">{{ urgentes_count }}</h3>
+                                <small>Urgentes</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mb-4">
+            <!-- Chasis Disponibles -->
+            <div class="col-md-4 mb-3">
+                <div class="card card-stats bg-info text-white">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="stat-icon bg-white bg-opacity-25 me-3">
+                                <i class="bi bi-truck"></i>
+                            </div>
+                            <div>
+                                <h3 class="mb-0">{{ chasis_disponibles_count }}</h3>
+                                <small>Chasis Disponibles</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- En Producción -->
+            <div class="col-md-4 mb-3">
+                <div class="card card-stats bg-primary text-white">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="stat-icon bg-white bg-opacity-25 me-3">
+                                <i class="bi bi-gear-fill"></i>
+                            </div>
+                            <div>
+                                <h3 class="mb-0">{{ en_produccion_count }}</h3>
+                                <small>En Producción</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Asignaciones Recientes -->
+            <div class="col-md-4 mb-3">
+                <div class="card card-stats bg-success text-white">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="stat-icon bg-white bg-opacity-25 me-3">
+                                <i class="bi bi-check-circle"></i>
+                            </div>
+                            <div>
+                                <h3 class="mb-0">{{ asignaciones_recientes|length }}</h3>
+                                <small>Asignaciones Recientes</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pestañas de Navegación -->
+        <ul class="nav nav-tabs mb-4" id="pcpTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="pedidos-tab" data-bs-toggle="tab" data-bs-target="#pedidos" type="button" role="tab">
+                    <i class="bi bi-list-check me-2"></i>Pedidos por Asignar
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="modificaciones-tab" data-bs-toggle="tab" data-bs-target="#modificaciones" type="button" role="tab">
+                    <i class="bi bi-pencil-square me-2"></i>Modificaciones Solicitadas
+                    {% if modificacion_solicitada_count > 0 %}
+                    <span class="badge bg-warning text-dark ms-1">{{ modificacion_solicitada_count }}</span>
+                    {% endif %}
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="eliminaciones-tab" data-bs-toggle="tab" data-bs-target="#eliminaciones" type="button" role="tab">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Eliminaciones Solicitadas
+                    {% if eliminacion_solicitada_count > 0 %}
+                    <span class="badge bg-secondary ms-1">{{ eliminacion_solicitada_count }}</span>
+                    {% endif %}
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="chasis-tab" data-bs-toggle="tab" data-bs-target="#chasis" type="button" role="tab">
+                    <i class="bi bi-truck me-2"></i>Chasis Disponibles
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="asignaciones-tab" data-bs-toggle="tab" data-bs-target="#asignaciones" type="button" role="tab">
+                    <i class="bi bi-link-45deg me-2"></i>Asignaciones Realizadas
+                </button>
+            </li>
+        </ul>
+
+        <!-- Contenido de las Pestañas -->
+        <div class="tab-content" id="pcpTabContent">
+            <!-- Tab: Pedidos por Asignar -->
+            <div class="tab-pane fade show active" id="pedidos" role="tabpanel">
+                <div class="card">
+                    <div class="card-header bg-white">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">📋 Pedidos por Asignar</h5>
+                            <div>
+                                <select class="form-select form-select-sm d-inline-block w-auto" onchange="filtrarPedidos(this.value)">
+                                    <option value="">Todos los implementos</option>
+                                    <option value="TOLVA">TOLVA</option>
+                                    <option value="MIXER">MIXER</option>
+                                    <option value="ATT">ATT</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        {% if pedidos_pendientes %}
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="tablaPedidos">
+                                <thead>
+                                    <tr>
+                                        <th>Pedido</th>
+                                        <th>Cliente</th>
+                                        <th>Modelo</th>
+                                        <th>Color</th>
+                                        <th>Implemento</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for pedido in pedidos_pendientes %}
+                                    <tr class="pedido-card border-warning {% if pedido.prioridad == 'URGENTE' %}urgencia-alta{% endif %}" data-implemento="{{ pedido.implemento }}">
+                                        <td>
+                                            <strong class="text-primary">{{ pedido.pedido }}</strong>
+                                        </td>
+                                        <td>{{ pedido.cliente }}</td>
+                                        <td>{{ pedido.modelo }}</td>
+                                        <td>{{ pedido.color }}</td>
+                                        <td>
+                                            <span class="badge bg-secondary">{{ pedido.implemento }}</span>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <button class="btn btn-outline-primary" onclick="verDetallesPedido({{ pedido.id }})" title="Ver detalles">
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                                <button class="btn btn-outline-success" onclick="asignarChasis({{ pedido.id }}, '{{ pedido.implemento }}', '{{ pedido.modelo }}', '{{ pedido.color }}')" title="Asignar Chasis">
+                                                    <i class="bi bi-link-45deg"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-check-circle display-1 text-success"></i>
+                            <h5 class="text-success mt-3">¡Todo en orden!</h5>
+                            <p class="text-muted">No hay pedidos pendientes de asignación.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Modificaciones Solicitadas -->
+            <div class="tab-pane fade" id="modificaciones" role="tabpanel">
+                <div class="card">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">✏️ Modificaciones Solicitadas por Ventas</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if solicitudes_modificacion %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Pedido</th>
+                                        <th>Cliente</th>
+                                        <th>Modelo</th>
+                                        <th>Implemento</th>
+                                        <th>Chasis Actual</th>
+                                        <th>Fecha Compromiso</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for solicitud in solicitudes_modificacion %}
+                                    <tr class="pedido-card border-warning">
+                                        <td>
+                                            <strong class="text-primary">{{ solicitud.pedido }}</strong>
+                                        </td>
+                                        <td>{{ solicitud.cliente }}</td>
+                                        <td>{{ solicitud.modelo }}</td>
+                                        <td>
+                                            <span class="badge bg-secondary">{{ solicitud.implemento }}</span>
+                                        </td>
+                                        <td>
+                                            {% if solicitud.chasis_asignado %}
+                                                <span class="badge bg-info">{{ solicitud.chasis_asignado.nro_chasis }}</span>
+                                            {% else %}
+                                                <span class="text-muted">No asignado</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ solicitud.fecha_compromiso.strftime('%d/%m/%Y') if solicitud.fecha_compromiso else '-' }}</td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <button class="btn btn-outline-primary" onclick="verDetallesPedido({{ solicitud.id }})" title="Ver detalles">
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                                <button class="btn btn-outline-warning" onclick="procesarModificacion({{ solicitud.id }})" title="Procesar Modificación">
+                                                    <i class="bi bi-pencil-square"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-pencil-square display-1 text-muted"></i>
+                            <h5 class="text-muted mt-3">Sin solicitudes de modificación</h5>
+                            <p class="text-muted">No hay solicitudes de modificación pendientes.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Eliminaciones Solicitadas -->
+            <div class="tab-pane fade" id="eliminaciones" role="tabpanel">
+                <div class="card">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">🗑️ Eliminaciones Solicitadas por Ventas</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if solicitudes_eliminacion %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Pedido</th>
+                                        <th>Cliente</th>
+                                        <th>Modelo</th>
+                                        <th>Implemento</th>
+                                        <th>Chasis Asignado</th>
+                                        <th>Fecha Compromiso</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for solicitud in solicitudes_eliminacion %}
+                                    <tr class="pedido-card border-secondary">
+                                        <td>
+                                            <strong class="text-primary">{{ solicitud.pedido }}</strong>
+                                        </td>
+                                        <td>{{ solicitud.cliente }}</td>
+                                        <td>{{ solicitud.modelo }}</td>
+                                        <td>
+                                            <span class="badge bg-secondary">{{ solicitud.implemento }}</span>
+                                        </td>
+                                        <td>
+                                            {% if solicitud.chasis_asignado %}
+                                                <span class="badge bg-info">{{ solicitud.chasis_asignado.nro_chasis }}</span>
+                                            {% else %}
+                                                <span class="text-muted">No asignado</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ solicitud.fecha_compromiso.strftime('%d/%m/%Y') if solicitud.fecha_compromiso else '-' }}</td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <button class="btn btn-outline-primary" onclick="verDetallesPedido({{ solicitud.id }})" title="Ver detalles">
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                                <button class="btn btn-outline-success" onclick="aprobarEliminacion({{ solicitud.id }})" title="Aprobar Eliminación">
+                                                    <i class="bi bi-check-circle"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-exclamation-triangle display-1 text-muted"></i>
+                            <h5 class="text-muted mt-3">Sin solicitudes de eliminación</h5>
+                            <p class="text-muted">No hay solicitudes de eliminación pendientes.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Chasis Disponibles -->
+            <div class="tab-pane fade" id="chasis" role="tabpanel">
+                <div class="card">
+                    <div class="card-header bg-white">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">🚚 Chasis Disponibles por Implemento</h5>
+                            <div>
+                                <select class="form-select form-select-sm d-inline-block w-auto" onchange="filtrarChasis(this.value)">
+                                    <option value="">Todos los implementos</option>
+                                    <option value="TOLVA">TOLVA</option>
+                                    <option value="MIXER">MIXER</option>
+                                    <option value="ATT">ATT</option>
+                                    <option value="EMBOLSADORA">EMBOLSADORA</option>
+                                    <option value="SEMBRADORA">SEMBRADORA</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Filtros Avanzados -->
+                        <div class="mt-3 p-3 bg-light rounded">
+                            <div class="row g-2">
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold">Filtrar por Modelo/Capacidad:</label>
+                                    <select class="form-select form-select-sm" id="filtroModelo" onchange="aplicarFiltrosAvanzados()">
+                                        <option value="">Todos los modelos</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold">Ordenar por:</label>
+                                    <select class="form-select form-select-sm" id="filtroOrden" onchange="aplicarFiltrosAvanzados()">
+                                        <option value="chasis">Número Chasis</option>
+                                        <option value="mas_vieja">Más Vieja Disponible</option>
+                                        <option value="mas_nueva">Más Nueva Disponible</option>
+                                        <option value="modelo">Modelo</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold">Puesto M5:</label>
+                                    <select class="form-select form-select-sm" id="filtroPuesto" onchange="aplicarFiltrosAvanzados()">
+                                        <option value="">Todos los puestos</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold">Mostrar:</label>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="tipoMostrar" id="mostrarTodos" value="todos" checked onchange="aplicarFiltrosAvanzados()">
+                                        <label class="form-check-label small" for="mostrarTodos">Todos</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="tipoMostrar" id="mostrarM5" value="m5" onchange="aplicarFiltrosAvanzados()">
+                                        <label class="form-check-label small" for="mostrarM5">Solo M5</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        {% for implemento, chasis_list in chasis_por_implemento.items() %}
+                        <div class="mb-4 chasis-section" data-implemento="{{ implemento }}">
+                            <h6 class="text-primary mb-3">
+                                <i class="bi bi-truck me-2"></i>{{ implemento }} ({{ chasis_list|length }} disponibles)
+                            </h6>
+                            <div class="row g-3">
+                                {% for chasis in chasis_list %}
+                                <div class="col-md-6 col-lg-4">
+                                    <div class="card chasis-disponible h-100" 
+                                         onclick="verDetallesChasis('{{ chasis.nro_chasis }}', '{{ implemento }}')"
+                                         data-chasis-info='{{ chasis | tojson }}'>
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <h6 class="mb-0 text-primary">{{ chasis.nro_chasis }}</h6>
+                                                <span class="badge bg-success">Disponible</span>
+                                                {% if chasis.puesto_conjunto %}
+                                                <span class="badge bg-info">{{ chasis.puesto_conjunto }}</span>
+                                                {% endif %}
+                                            </div>
+                                            <p class="mb-1"><strong>Modelo:</strong> {{ chasis.modelo }}</p>
+                                            <p class="mb-1">
+                                            <strong>Cliente:</strong> 
+                                            {% if chasis.cliente == 'STOCK' %}
+                                                <span class="editable-cliente" 
+                                                      data-chasis="{{ chasis.nro_chasis }}" 
+                                                      data-cliente-actual="{{ chasis.cliente }}"
+                                                      style="cursor: pointer; color: #007bff; text-decoration: underline;"
+                                                      onclick="editarCliente(this)">
+                                                    {{ chasis.cliente }}
+                                                </span>
+                                                <i class="bi bi-pencil-square ms-1 text-muted" style="font-size: 0.8em;"></i>
+                                            {% elif chasis.cliente %}
+                                                <span class="text-muted">{{ chasis.cliente }}</span>
+                                                <i class="bi bi-lock ms-1 text-muted" style="font-size: 0.8em;" title="No editable"></i>
+                                            {% else %}
+                                                <span class="text-warning">Sin cliente (en producción)</span>
+                                                <i class="bi bi-gear ms-1 text-muted" style="font-size: 0.8em;" title="En producción"></i>
+                                            {% endif %}
+                                        </p>
+                                            {% if chasis.lanzamiento %}
+                                            <p class="mb-0"><small class="text-muted">Lanzamiento: {{ chasis.lanzamiento }}</small></p>
+                                            {% endif %}
+                                            {% if chasis.fecha_playon %}
+                                            <p class="mb-0"><small class="text-success">Liberado: {{ chasis.fecha_playon.strftime('%d/%m/%Y') if chasis.fecha_playon else '' }}</small></p>
+                                            {% endif %}
+                                            {% if chasis.sector %}
+                                            <p class="mb-0"><small class="text-info">Sector: {{ chasis.sector }}</small></p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Asignaciones Realizadas -->
+            <div class="tab-pane fade" id="asignaciones" role="tabpanel">
+                <div class="card">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">🔗 Asignaciones Realizadas Recientemente</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if asignaciones_recientes %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha Asignación</th>
+                                        <th>Pedido</th>
+                                        <th>Cliente</th>
+                                        <th>Chasis Asignado</th>
+                                        <th>Implemento</th>
+                                        <th>Asignado Por</th>
+                                        <th>Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for asignacion in asignaciones_recientes %}
+                                    <tr>
+                                        <td>
+                                            {% if asignacion.fecha_asignacion_chasis %}
+                                                {{ asignacion.fecha_asignacion_chasis.strftime('%d/%m/%Y %H:%M') }}
+                                            {% elif asignacion.fecha_asignacion_real %}
+                                                {{ asignacion.fecha_asignacion_real.strftime('%d/%m/%Y %H:%M') }}
+                                            {% elif asignacion.fecha_emision %}
+                                                {{ asignacion.fecha_emision.strftime('%d/%m/%Y') }}
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+                                        <td><strong>{{ asignacion.codigo_pedido or asignacion.pedido }}</strong></td>
+                                        <td>{{ asignacion.cliente }}</td>
+                                        <td>
+                                            {% if asignacion.chasis_asignado %}
+                                                <span class="fw-bold text-success">{{ asignacion.chasis_asignado.nro_chasis }}</span>
+                                            {% elif asignacion.chasis_id and chasis_asignados_info.get(asignacion.id) %}
+                                                {% set chasis = chasis_asignados_info[asignacion.id] %}
+                                                <span class="fw-bold text-success">{{ chasis.nro_chasis }}</span>
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+                                        <td><span class="badge bg-secondary">{{ asignacion.implemento }}</span></td>
+                                        <td>
+                                            {% if asignacion.modificado_por %}
+                                                {{ asignacion.modificado_por }}
+                                            {% elif asignacion.usuario_asignacion %}
+                                                {{ asignacion.usuario_asignacion }}
+                                            {% elif asignacion.creado_por %}
+                                                {{ asignacion.creado_por }}
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="estado-badge 
+                                                {% if asignacion.estado == 'ASIGNADO' %}bg-info text-white
+                                                {% elif asignacion.estado == 'EN_PRODUCCION' %}bg-primary text-white
+                                                {% elif asignacion.estado == 'COMPLETADO' %}bg-success text-white
+                                                {% endif %}">
+                                                {{ asignacion.estado.replace('_', ' ') }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-link-45deg display-1 text-muted"></i>
+                            <h5 class="text-muted mt-3">Sin asignaciones recientes</h5>
+                            <p class="text-muted">No se han realizado asignaciones de chasis recientemente.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Asignar Chasis -->
+    <div class="modal fade" id="modalAsignarChasis" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold">
+                        <i class="bi bi-link-45deg me-2"></i>Asignar Chasis al Pedido
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body bg-light" id="asignarContenido">
+                    <!-- Contenido cargado dinámicamente -->
+                </div>
+                <div class="modal-footer bg-light border-top">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="confirmarAsignacion()">
+                        <i class="bi bi-check-circle me-1"></i> Confirmar Asignación
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Éxito de Asignación -->
+    <div class="modal fade" id="modalExitoAsignacion" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold text-center w-100">
+                        <i class="bi bi-check-circle-fill me-2"></i>Asignación Exitosa
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body bg-light text-center py-4">
+                    <div class="mb-3">
+                        <i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i>
+                    </div>
+                    <h4 class="text-primary fw-bold mb-3">Chasis asignado correctamente</h4>
+                    <p class="text-muted mb-0">El chasis ha sido asignado al pedido exitosamente.</p>
+                </div>
+                <div class="modal-footer bg-light border-top justify-content-center">
+                    <button type="button" class="btn btn-primary px-4" data-bs-dismiss="modal" onclick="location.reload()">
+                        <i class="bi bi-arrow-clockwise me-1"></i>Continuar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Confirmación de Proceso de Modificación -->
+    <div class="modal fade" id="modalConfirmarProcesoModificacion" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-warning text-white">
+                    <h5 class="modal-title" id="modalTituloProceso">⚙️ PROCESAR MODIFICACIÓN</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body bg-light" id="modalCuerpoProceso">
+                    <!-- Contenido dinámico -->
+                </div>
+                <div class="modal-footer bg-light border-top justify-content-center">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-warning" id="btnConfirmarProcesoMod">
+                        <i class="bi bi-gear me-1"></i> Procesar Modificación
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Éxito de Proceso de Modificación -->
+    <div class="modal fade" id="modalExitoProcesoModificacion" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="modalTituloExito">✅ MODIFICACIÓN PROCESADA</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body bg-light text-center py-4" id="modalCuerpoExito">
+                    <!-- Contenido dinámico -->
+                </div>
+                <div class="modal-footer bg-light border-top justify-content-center">
+                    <button type="button" class="btn btn-success" data-bs-dismiss="modal" onclick="location.reload()">
+                        <i class="bi bi-check-circle me-1"></i> Aceptar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Confirmación de Eliminación -->
+    <div class="modal fade" id="modalConfirmarEliminacion" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-warning text-white">
+                    <h5 class="modal-title fw-bold text-center w-100">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>Confirmar Aprobación
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body bg-light text-center py-4">
+                    <div class="mb-3">
+                        <i class="bi bi-exclamation-triangle-fill text-warning" style="font-size: 3rem;"></i>
+                    </div>
+                    <h4 class="text-warning fw-bold mb-3">¿Aprobar Solicitud de Eliminación?</h4>
+                    <p class="text-muted mb-3">Esta acción desasignará el chasis del pedido y lo dejará disponible para eliminación definitiva.</p>
+                    <div class="alert alert-warning border-0 bg-light">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Importante:</strong> El chasis quedará disponible para ser asignado a otros pedidos.
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-top justify-content-center">
+                    <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>Cancelar
+                    </button>
+                    <button type="button" class="btn btn-warning px-4" id="btnConfirmarAprobacion">
+                        <i class="bi bi-check-circle me-1"></i>Aprobar Eliminación
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Éxito de Aprobación -->
+    <div class="modal fade" id="modalExitoAprobacion" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title fw-bold text-center w-100">
+                        <i class="bi bi-check-circle-fill me-2"></i>Aprobación Exitosa
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body bg-light text-center py-4">
+                    <div class="mb-3">
+                        <i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i>
+                    </div>
+                    <h4 class="text-success fw-bold mb-3">Solicitud Aprobada</h4>
+                    <p class="text-muted mb-0">La solicitud de eliminación ha sido aprobada correctamente. El chasis ha sido desasignado y el pedido está disponible para eliminación definitiva.</p>
+                </div>
+                <div class="modal-footer bg-light border-top justify-content-center">
+                    <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">
+                        <i class="bi bi-check-circle me-1"></i>Aceptar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Detalles -->
+    <div class="modal fade" id="modalDetalles" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="detallesTitulo">Detalles</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="detallesContenido">
+                    <!-- Contenido cargado dinámicamente -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let pedidoActualId = null;
+        let implementoActual = null;
+
+        function filtrarPedidos(implemento) {
+            const filas = document.querySelectorAll('#tablaPedidos tr');
+            filas.forEach(fila => {
+                if (!implemento || fila.dataset.implemento === implemento) {
+                    fila.style.display = '';
+                } else {
+                    fila.style.display = 'none';
+                }
+            });
+        }
+
+        function filtrarChasis(implemento) {
+            const secciones = document.querySelectorAll('.chasis-section');
+            secciones.forEach(seccion => {
+                if (!implemento || seccion.dataset.implemento === implemento) {
+                    seccion.style.display = '';
+                } else {
+                    seccion.style.display = 'none';
+                }
+            });
+        }
+
+        function verDetallesPedido(pedidoId) {
+            fetch(`/admin/pcp/ver_pedido/${pedidoId}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('detallesTitulo').textContent = `Detalles del Pedido ${data.codigo_pedido}`;
+                    const contenido = document.getElementById('detallesContenido');
+                    contenido.innerHTML = `
+                        <div class="row g-3">
+                            <div class="col-md-6"><strong>Código:</strong><br>${data.codigo_pedido}</div>
+                            <div class="col-md-6"><strong>Estado:</strong><br><span class="badge bg-info">${data.estado}</span></div>
+                            <div class="col-md-6"><strong>Cliente:</strong><br>${data.cliente}</div>
+                            <div class="col-md-6"><strong>Modelo:</strong><br>${data.modelo}</div>
+                            <div class="col-md-6"><strong>Implemento:</strong><br>${data.implemento}</div>
+                            <div class="col-md-6"><strong>Cantidad:</strong><br>${data.cantidad}</div>
+                            <div class="col-md-6"><strong>Fecha Compromiso:</strong><br>${new Date(data.fecha_compromiso).toLocaleDateString()}</div>
+                            <div class="col-md-6"><strong>Prioridad:</strong><br>${data.prioridad}</div>
+                            ${data.vendedor ? `<div class="col-md-6"><strong>Vendedor:</strong><br>${data.vendedor}</div>` : ''}
+                            ${data.observaciones ? `<div class="col-12"><strong>Observaciones:</strong><br>${data.observaciones}</div>` : ''}
+                        </div>
+                    `;
+                    const modal = new bootstrap.Modal(document.getElementById('modalDetalles'));
+                    modal.show();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al cargar los detalles del pedido');
+                });
+        }
+
+        function verDetallesChasis(nroChasis, implemento) {
+            fetch(`/admin/pcp/ver_chasis/${nroChasis}?implemento=${implemento}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('detallesTitulo').textContent = `Detalles del Chasis ${nroChasis}`;
+                    const contenido = document.getElementById('detallesContenido');
+                    contenido.innerHTML = `
+                        <div class="row g-3">
+                            <div class="col-md-6"><strong>Número Chasis:</strong><br>${data.nro_chasis}</div>
+                            <div class="col-md-6"><strong>Modelo:</strong><br>${data.modelo}</div>
+                            <div class="col-md-6"><strong>Cliente:</strong><br>${data.cliente}</div>
+                            <div class="col-md-6"><strong>Implemento:</strong><br>${implemento}</div>
+                            <div class="col-md-6"><strong>Fecha Asignación:</strong><br>${new Date(data.fecha_asignacion).toLocaleDateString()}</div>
+                            ${data.lanzamiento ? `<div class="col-md-6"><strong>Lanzamiento:</strong><br>${data.lanzamiento}</div>` : ''}
+                            ${data.observaciones ? `<div class="col-12"><strong>Observaciones:</strong><br>${data.observaciones}</div>` : ''}
+                        </div>
+                    `;
+                    const modal = new bootstrap.Modal(document.getElementById('modalDetalles'));
+                    modal.show();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al cargar los detalles del chasis');
+                });
+        }
+
+        function asignarChasis(pedidoId, implemento, modelo, color) {
+            pedidoActualId = pedidoId;
+            implementoActual = implemento;
+            modeloActual = modelo;
+            colorActual = color;
+            
+            fetch(`/admin/pcp/obtener_chasis_disponibles/${implemento}?modelo=${encodeURIComponent(modelo)}&color=${encodeURIComponent(color)}`)
+                .then(response => response.json())
+                .then(data => {
+                    const contenido = document.getElementById('asignarContenido');
+                    if (data.chasis_disponibles.length > 0) {
+                        let opciones = data.chasis_disponibles.map(chasis => 
+                            `<option value="${chasis.nro_chasis}">${chasis.nro_chasis} - ${chasis.modelo} (${chasis.cliente})</option>`
+                        ).join('');
+                        
+                        contenido.innerHTML = `
+                            <div class="alert alert-info">
+                                <strong>Implemento:</strong> ${implemento}<br>
+                                <strong>Chasis disponibles:</strong> ${data.chasis_disponibles.length}
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Seleccionar Chasis:</label>
+                                <select id="chasisSeleccionado" class="form-select">
+                                    <option value="">Elija un chasis...</option>
+                                    ${opciones}
+                                </select>
+                            </div>
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                Esta acción asignará el chasis seleccionado al pedido y no podrá deshacerse fácilmente.
+                            </div>
+                        `;
+                    } else {
+                        contenido.innerHTML = `
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                No hay chasis disponibles para <strong>${implemento}</strong>.
+                            </div>
+                            <div class="text-center">
+                                <button type="button" class="btn btn-primary" onclick="window.location.href='/admin/opciones_produccion'">
+                                    <i class="bi bi-plus-circle me-1"></i> Crear Nuevo Chasis
+                                </button>
+                            </div>
+                        `;
+                    }
+                    const modal = new bootstrap.Modal(document.getElementById('modalAsignarChasis'));
+                    modal.show();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al cargar los chasis disponibles');
+                });
+        }
+
+        function confirmarAsignacion() {
+            const chasisSeleccionado = document.getElementById('chasisSeleccionado').value;
+            if (!chasisSeleccionado) {
+                alert('Por favor, seleccione un chasis');
+                return;
+            }
+
+            fetch('/admin/pcp/asignar_chasis', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    pedido_id: pedidoActualId,
+                    chasis_asignado: chasisSeleccionado
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Mostrar modal de éxito en lugar de alert
+                    const modalExito = new bootstrap.Modal(document.getElementById('modalExitoAsignacion'));
+                    modalExito.show();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al asignar el chasis');
+            });
+        }
+
+        function editarCliente(elemento) {
+            const nroChasis = elemento.dataset.chasis;
+            const clienteActual = elemento.dataset.clienteActual;
+            
+            // Crear input para editar
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'form-control form-control-sm';
+            input.value = clienteActual;
+            
+            // Reemplazar el texto con el input
+            const clienteSpan = elemento.querySelector('.cliente-info');
+            clienteSpan.innerHTML = '';
+            clienteSpan.appendChild(input);
+            
+            input.focus();
+            input.select();
+            
+            // Guardar al presionar Enter o perder el foco
+            input.addEventListener('blur', guardarCliente);
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    guardarCliente.call(this);
+                }
+            });
+            
+            function guardarCliente() {
+                const nuevoCliente = this.value.trim();
+                if (nuevoCliente && nuevoCliente !== clienteActual) {
+                    fetch('/admin/pcp/editar_cliente', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            nro_chasis: nroChasis,
+                            cliente: nuevoCliente
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            location.reload();
+                        } else {
+                            alert('Error: ' + data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Error al actualizar el cliente');
+                    });
+                } else {
+                    location.reload();
+                }
+            }
+        }
+
+        function aprobarEliminacion(pedidoId) {
+            // Guardar el ID del pedido para usarlo en el botón de confirmación
+            window.pedidoIdAprobar = pedidoId;
+            
+            // Mostrar el modal de confirmación
+            const modalConfirmacion = new bootstrap.Modal(document.getElementById('modalConfirmarEliminacion'));
+            modalConfirmacion.show();
+        }
+
+        // Función para ejecutar la aprobación cuando se confirma en el modal
+        function procesarModificacion(pedidoId) {
+            // Guardar el ID del pedido para usarlo en el modal
+            window.pedidoIdProcesarMod = pedidoId;
+            
+            // Mostrar modal de confirmación
+            const modal = new bootstrap.Modal(document.getElementById('modalConfirmarProcesoModificacion'));
+            
+            // Configurar contenido del modal
+            document.getElementById('modalTituloProceso').innerHTML = '⚙️ PROCESAR MODIFICACIÓN';
+            document.getElementById('modalCuerpoProceso').innerHTML = `
+                <div class="alert alert-warning">
+                    <h5><i class="bi bi-exclamation-triangle me-2"></i> Confirmar Proceso</h5>
+                    <p>Está a punto de procesar la solicitud de modificación para el pedido <strong>${pedidoId}</strong>.</p>
+                    <p>Esta acción permitirá que PCP continúe con el proceso de modificación solicitado.</p>
+                </div>
+                <div class="alert alert-info">
+                    <h6><i class="bi bi-info-circle me-2"></i> Información del Proceso:</h6>
+                    <ul>
+                        <li>PCP podrá ver los detalles de la modificación</li>
+                        <li>Se podrá coordinar con el cliente si es necesario</li>
+                        <li>Se realizarán los cambios solicitados en el pedido</li>
+                        <li>Se actualizará el estado del pedido según corresponda</li>
+                    </ul>
+                </div>
+            `;
+            
+            // Configurar botones
+            document.getElementById('modalFooterProceso').innerHTML = `
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i> Cancelar
+                </button>
+                <button type="button" class="btn btn-warning" id="btnConfirmarProcesoMod">
+                    <i class="bi bi-gear me-1"></i> Procesar Modificación
+                </button>
+            `;
+            
+            // Mostrar modal
+            modal.show();
+        }
+
+        // Función para ejecutar el procesamiento cuando se confirma en el modal
+        function ejecutarProcesoModificacion() {
+            const pedidoId = window.pedidoIdProcesarMod;
+            
+            // Cerrar el modal de confirmación
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalConfirmarProcesoModificacion'));
+            modal.hide();
+            
+            // Mostrar indicador de carga
+            const btnProcesar = document.getElementById('btnConfirmarProcesoMod');
+            const textoOriginal = btnProcesar.innerHTML;
+            btnProcesar.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Procesando...';
+            btnProcesar.disabled = true;
+            
+            // Ejecutar el procesamiento
+            fetch(`/admin/pcp/procesar_modificacion/${pedidoId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Restaurar el botón
+                btnProcesar.innerHTML = textoOriginal;
+                btnProcesar.disabled = false;
+                
+                if (data.success) {
+                    // Mostrar modal de éxito
+                    const modalExito = new bootstrap.Modal(document.getElementById('modalExitoProcesoModificacion'));
+                    document.getElementById('modalTituloExito').innerHTML = '✅ Modificación Procesada';
+                    document.getElementById('modalCuerpoExito').innerHTML = `
+                        <div class="alert alert-success">
+                            <h5><i class="bi bi-check-circle me-2"></i> Proceso Completado</h5>
+                            <p>La solicitud de modificación ha sido procesada correctamente.</p>
+                            <p><strong>${data.message}</strong></p>
+                        </div>
+                    `;
+                    document.getElementById('modalFooterExito').innerHTML = `
+                        <button type="button" class="btn btn-success" data-bs-dismiss="modal" onclick="location.reload()">
+                            <i class="bi bi-check-circle me-1"></i> Aceptar
+                        </button>
+                    `;
+                    modalExito.show();
+                    
+                    // Recargar la página después de un momento
+                    setTimeout(() => {
+                        location.reload();
+                    }, 2000);
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                // Restaurar el botón
+                btnProcesar.innerHTML = textoOriginal;
+                btnProcesar.disabled = false;
+                console.error('Error:', error);
+                alert('Error al procesar la modificación');
+            });
+        }
+
+        // Agregar event listener al botón de confirmación
+        document.addEventListener('DOMContentLoaded', function() {
+            const btnConfirmar = document.getElementById('btnConfirmarProcesoMod');
+            if (btnConfirmar) {
+                btnConfirmar.addEventListener('click', ejecutarProcesoModificacion);
+            }
+        });
+
+        function ejecutarAprobacionEliminacion() {
+            const pedidoId = window.pedidoIdAprobar;
+            
+            // Cerrar el modal de confirmación
+            const modalConfirmacion = bootstrap.Modal.getInstance(document.getElementById('modalConfirmarEliminacion'));
+            modalConfirmacion.hide();
+            
+            // Mostrar indicador de carga
+            const btnConfirmar = document.getElementById('btnConfirmarAprobacion');
+            const textoOriginal = btnConfirmar.innerHTML;
+            btnConfirmar.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Procesando...';
+            btnConfirmar.disabled = true;
+            
+            // Ejecutar la aprobación
+            fetch('/admin/pcp/aprobar_eliminacion/' + pedidoId, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Restaurar el botón
+                btnConfirmar.innerHTML = textoOriginal;
+                btnConfirmar.disabled = false;
+                
+                if (data.success) {
+                    // Mostrar modal de éxito
+                    const modalExito = new bootstrap.Modal(document.getElementById('modalExitoAprobacion'));
+                    modalExito.show();
+                    
+                    // Recargar la página después de un momento
+                    setTimeout(() => {
+                        location.reload();
+                    }, 2000);
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                // Restaurar el botón
+                btnConfirmar.innerHTML = textoOriginal;
+                btnConfirmar.disabled = false;
+                alert('Error al aprobar la solicitud de eliminación');
+            });
+        }
+
+        // Agregar event listener al botón de confirmación
+        document.addEventListener('DOMContentLoaded', function() {
+            const btnConfirmar = document.getElementById('btnConfirmarAprobacion');
+            if (btnConfirmar) {
+                btnConfirmar.addEventListener('click', ejecutarAprobacionEliminacion);
+            }
+        });
+
+        function aplicarFiltrosAvanzados() {
+            const modelo = document.getElementById('filtroModelo').value;
+            const orden = document.getElementById('filtroOrden').value;
+            const puesto = document.getElementById('filtroPuesto').value;
+            const tipoMostrar = document.querySelector('input[name="tipoMostrar"]:checked').value;
+            
+            // Obtener todas las tarjetas de chasis
+            const tarjetas = document.querySelectorAll('.chasis-disponible');
+            const secciones = document.querySelectorAll('.chasis-section');
+            
+            // Ocultar todas las secciones primero
+            secciones.forEach(seccion => {
+                seccion.style.display = 'none';
+            });
+            
+            // Filtrar y mostrar tarjetas
+            let tarjetasVisibles = [];
+            
+            tarjetas.forEach(tarjeta => {
+                const chasisInfo = obtenerInfoChasis(tarjeta);
+                
+                // Aplicar filtros
+                let mostrar = true;
+                
+                // Filtro por modelo
+                if (modelo && chasisInfo.modelo !== modelo) {
+                    mostrar = false;
+                }
+                
+                // Filtro por puesto M5
+                if (puesto && chasisInfo.puesto !== puesto) {
+                    mostrar = false;
+                }
+                
+                // Filtro por tipo (todos vs solo M5)
+                if (tipoMostrar === 'm5' && !chasisInfo.puesto.includes('M5')) {
+                    mostrar = false;
+                }
+                
+                if (mostrar) {
+                    tarjeta.style.display = '';
+                    tarjetasVisibles.push({tarjeta, info: chasisInfo});
+                } else {
+                    tarjeta.style.display = 'none';
+                }
+            });
+            
+            // Ordenar las tarjetas visibles
+            ordenarTarjetas(tarjetasVisibles, orden);
+            
+            // Mostrar secciones que tienen tarjetas visibles
+            secciones.forEach(seccion => {
+                const tarjetasEnSeccion = seccion.querySelectorAll('.chasis-disponible');
+                const tieneVisibles = Array.from(tarjetasEnSeccion).some(t => t.style.display !== 'none');
+                
+                if (tieneVisibles) {
+                    seccion.style.display = '';
+                    // Actualizar contador
+                    const visibles = Array.from(tarjetasEnSeccion).filter(t => t.style.display !== 'none').length;
+                    const titulo = seccion.querySelector('h6');
+                    if (titulo) {
+                        const implemento = seccion.dataset.implemento;
+                        titulo.innerHTML = `<i class="bi bi-truck me-2"></i>${implemento} (${visibles} disponibles)`;
+                    }
+                }
+            });
+        }
+        
+        function obtenerInfoChasis(tarjeta) {
+            // Obtener información del atributo data-chasis-info
+            const chasisInfoStr = tarjeta.getAttribute('data-chasis-info');
+            if (!chasisInfoStr) {
+                return {
+                    nroChasis: '',
+                    modelo: '',
+                    puesto: '',
+                    fechaLiberacion: null
+                };
+            }
+            
+            try {
+                const chasisInfo = JSON.parse(chasisInfoStr);
+                return {
+                    nroChasis: chasisInfo.nro_chasis || '',
+                    modelo: chasisInfo.modelo || '',
+                    puesto: chasisInfo.puesto_conjunto || '',
+                    fechaLiberacion: chasisInfo.fecha_playon ? new Date(chasisInfo.fecha_playon) : null,
+                    sector: chasisInfo.sector || ''
+                };
+            } catch (e) {
+                console.error('Error parsing chasis info:', e);
+                return {
+                    nroChasis: '',
+                    modelo: '',
+                    puesto: '',
+                    fechaLiberacion: null
+                };
+            }
+        }
+        
+        function ordenarTarjetas(tarjetasVisibles, orden) {
+            // Ordenar según el criterio seleccionado
+            tarjetasVisibles.sort((a, b) => {
+                switch(orden) {
+                    case 'chasis':
+                        return parseInt(a.info.nroChasis) - parseInt(b.info.nroChasis);
+                    case 'mas_vieja':
+                        // Más vieja primero (fecha más antigua)
+                        if (!a.info.fechaLiberacion && !b.info.fechaLiberacion) return 0;
+                        if (!a.info.fechaLiberacion) return 1; // Sin fecha va al final
+                        if (!b.info.fechaLiberacion) return -1; // Sin fecha va al final
+                        return a.info.fechaLiberacion - b.info.fechaLiberacion;
+                    case 'mas_nueva':
+                        // Más nueva primero (fecha más reciente)
+                        if (!a.info.fechaLiberacion && !b.info.fechaLiberacion) return 0;
+                        if (!a.info.fechaLiberacion) return 1; // Sin fecha va al final
+                        if (!b.info.fechaLiberacion) return -1; // Sin fecha va al final
+                        return b.info.fechaLiberacion - a.info.fechaLiberacion;
+                    case 'modelo':
+                        return a.info.modelo.localeCompare(b.info.modelo);
+                    default:
+                        return 0;
+                }
+            });
+            
+            // Reordenar en el DOM
+            const contenedor = tarjetasVisibles[0]?.tarjeta.parentElement;
+            if (contenedor) {
+                tarjetasVisibles.forEach(item => {
+                    contenedor.appendChild(item.tarjeta);
+                });
+            }
+        }
+        
+        // Cargar opciones de filtros al cargar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            cargarOpcionesFiltros();
+        });
+        
+        function cargarOpcionesFiltros() {
+            // Cargar modelos disponibles
+            fetch('/admin/pcp/obtener_modelos_disponibles')
+                .then(response => response.json())
+                .then(data => {
+                    const selectModelo = document.getElementById('filtroModelo');
+                    if (data.modelos) {
+                        data.modelos.forEach(modelo => {
+                            const option = document.createElement('option');
+                            option.value = modelo;
+                            option.textContent = modelo;
+                            selectModelo.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => console.error('Error cargando modelos:', error));
+            
+            // Cargar puestos disponibles
+            fetch('/admin/pcp/obtener_puestos_disponibles')
+                .then(response => response.json())
+                .then(data => {
+                    const selectPuesto = document.getElementById('filtroPuesto');
+                    if (data.puestos) {
+                        data.puestos.forEach(puesto => {
+                            const option = document.createElement('option');
+                            option.value = puesto;
+                            option.textContent = puesto;
+                            selectPuesto.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => console.error('Error cargando puestos:', error));
+        }
+    </script>
+</body>
+</html>

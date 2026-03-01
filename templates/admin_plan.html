@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestión de Plan - Ascanelli</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <link rel="shortcut icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .card { border-radius: 12px; border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.08); }
+        .table-responsive { max-height: 700px; overflow-y: auto; }
+        .header-section { background: #212529; color: white; padding: 20px; border-radius: 12px; margin-bottom: 25px; }
+        .btn-calidad-ver { background-color: #FFD700; color: black; font-weight: bold; border: none; }
+        .btn-calidad-ver:hover { background-color: #e6c200; }
+        .img-alerta { width: 100%; border-radius: 8px; cursor: pointer; transition: 0.3s; }
+        .img-alerta:hover { opacity: 0.8; }
+        .badge-responsable { font-size: 0.75rem; background-color: #e9ecef; color: #495057; padding: 4px 8px; border-radius: 4px; }
+        /* Estilos para el Modal de Eliminación Impactante */
+        .modal-delete .modal-content { border-radius: 15px; border: none; overflow: hidden; }
+        .modal-delete .modal-header { background-color: #d32f2f; color: white; border: none; }
+        .modal-delete .btn-confirm { background-color: #d32f2f; color: white; font-weight: bold; border: none; }
+    </style>
+</head>
+<body class="bg-light">
+
+<div class="container-fluid mt-4 px-4">
+    <div class="header-section d-flex justify-content-between align-items-center shadow">
+        <div>
+            <h2 class="mb-0">📊 <a href="{{ url_for('planilla_produccion', implemento=implemento) }}" class="text-white text-decoration-none">{{ implemento }} - Gestión del Plan de Producción</a></h2>
+            <p class="mb-0 opacity-75">Administración, estados y alertas de calidad</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('admin_plan') }}" class="btn btn-outline-light fw-bold">← VOLVER</a>
+            <a href="{{ url_for('planilla_produccion', implemento=implemento) }}" class="btn btn-info fw-bold">📋 PLANILLA COMPLETA</a>
+            <button class="btn btn-success fw-bold" data-bs-toggle="modal" data-bs-target="#modalCargaManual">+ AGREGAR FILA</button>
+            <button class="btn btn-outline-light fw-bold" data-bs-toggle="modal" data-bs-target="#modalExcel">📤 SUBIR EXCEL</button>
+        </div>
+    </div>
+
+    <!-- Mostrar mensajes flash de Flask -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show position-fixed" 
+                     style="top: 20px; right: 20px; z-index: 9999; min-width: 300px; max-width: 500px;">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="row g-4">
+        <div class="col-md-12">
+            <div class="card p-3 border-primary shadow-sm" style="border-width: 2px;">
+                <form method="GET" class="row g-2 align-items-end">
+                    <input type="hidden" name="implemento" value="{{ implemento }}">
+                    <div class="col-md-3">
+                        <label class="small fw-bold text-primary text-uppercase">Sector de Producción</label>
+                        <select name="sector" id="sectorSelect" class="form-select border-primary fw-bold">
+                            <option value="SOLDADURA" {% if s_sel == 'SOLDADURA' %}selected{% endif %}>SOLDADURA</option>
+                            <option value="PINTURA" {% if s_sel == 'PINTURA' %}selected{% endif %}>PINTURA</option>
+                            <option value="MONTAJE" {% if s_sel == 'MONTAJE' %}selected{% endif %}>MONTAJE</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="small fw-bold text-primary text-uppercase">Puesto Específico</label>
+                        <select name="puesto" id="puestoSelect" class="form-select border-primary fw-bold"></select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="small fw-bold text-primary text-uppercase">Buscar N° Chasis</label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input type="text" name="busqueda_chasis" id="busquedaChasis" 
+                                   class="form-control border-primary fw-bold" 
+                                   placeholder="Ingrese número de chasis..."
+                                   value="{{ request.args.get('busqueda_chasis', '') }}"
+                                   onkeyup="busquedaEnTiempoReal()">
+                            <button type="button" class="btn btn-outline-secondary" onclick="limpiarBusquedaChasis()" title="Limpiar búsqueda">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-2 text-center">
+                        <button type="submit" class="btn btn-primary w-100 fw-bold">VER</button>
+                    </div>
+                </form>
+                <div class="mt-3 pt-3 border-top" id="seccionMultiple" style="display: none;">
+                    <div class="d-flex gap-2 align-items-center">
+                        <label class="fw-bold mb-0">Seleccionados: <span id="contadorSeleccionados">0</span></label>
+                        <button type="button" class="btn btn-warning fw-bold" onclick="abrirModalAvanzeMultiple()" id="btnAvanceMultiple">
+                            ⚡ CAMBIAR ESTADO MÚLTIPLE
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm fw-bold" onclick="limpiarSeleccion()">Deseleccionar todo</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-12">
+            <div class="card shadow">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th width="40"><input type="checkbox" id="selectTodos" onchange="seleccionarTodos(this.checked)" title="Seleccionar todos"></th>
+                                <th>Fecha</th>
+                                <th>Chasis</th>
+                                <th>Lanzamiento</th>
+                                <th>Implemento / Modelo</th>
+                                <th class="text-center" style="background-color: #6c757d;">PUESTO</th>
+                                <th>Estado Actual</th>
+                                <th>Responsable</th>
+                                <th>Calidad</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in planes %}
+                            <tr class="fila-plan">
+                                <td><input type="checkbox" class="checkbox-plan" value="{{ item.id }}" onchange="actualizarContador()"></td>
+                                <td class="fw-bold">{{ item.fecha }}</td>
+                                <td class="text-primary fw-bold">{{ item.nro_chasis }}</td>
+                                <td class="text-info fw-bold">{{ item.lanzamiento or '-' }}</td>
+                                <td>
+                                    <small class="d-block fw-bold">{{ item.implemento }}</small>
+                                    <small class="text-muted">{{ item.modelo }}</small>
+                                </td>
+                                <td class="text-center">
+                                    {% if item.puesto_conjunto %}
+                                        <span class="badge bg-secondary fw-bold">{{ item.puesto_conjunto }}</span>
+                                    {% else %}
+                                        <span class="badge bg-light text-dark fw-bold">SIN PUESTO</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <select onchange="cambiarEstadoManual('{{ item.id }}', this.value)" 
+                                            class="form-select form-select-sm fw-bold 
+                                            {% if item.estado == 'TERMINADO' %}text-success{% elif item.estado == 'PENDIENTE' %}text-warning{% else %}text-danger{% endif %}">
+                                        <option value="PENDIENTE" {% if item.estado == 'PENDIENTE' %}selected{% endif %}>PENDIENTE</option>
+                                        <option value="TERMINADO" {% if item.estado == 'TERMINADO' %}selected{% endif %}>TERMINADO</option>
+                                        <option value="REPROCESO" {% if item.estado == 'REPROCESO' %}selected{% endif %}>REPROCESO</option>
+                                    </select>
+                                </td>
+                                <td><span class="badge-responsable">{{ item.usuario_avance or 'Sin registro' }}</span></td>
+                                <td>
+                                    <button onclick="verAlertas('{{ item.id }}', '{{ item.nro_chasis }}')" class="btn btn-sm btn-calidad-ver shadow-sm">⚠️ VER</button>
+                                </td>
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="abrirModalEditar('{{item.id}}','{{item.nro_chasis}}','{{item.implemento}}','{{item.modelo}}','{{item.fecha}}')">✏️</button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="abrirModalEliminar('{{item.id}}', '{{item.nro_chasis}}')">🗑️</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalExcel" tabindex="-1">
+    <div class="modal-dialog">
+        <form action="/admin/upload" method="POST" enctype="multipart/form-data" class="modal-content">
+            <div class="modal-header"><h5>Subir Plan (Excel)</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body"><input type="file" name="file" class="form-control" accept=".xlsx, .xls" required></div>
+            <div class="modal-footer"><button type="submit" class="btn btn-primary">Cargar Archivo</button></div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="modalCargaManual" tabindex="-1">
+    <div class="modal-dialog">
+        <form action="/admin/add_manual" method="POST" class="modal-content">
+            <div class="modal-header"><h5>Agregar Chasis Manual</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <input type="text" name="nro_chasis" id="nro_chasis_input" class="form-control mb-2" placeholder="Nro Chasis" required>
+                {% if implemento %}
+                <input type="hidden" name="implemento" value="{{ implemento }}">
+                {% else %}
+                <input type="text" name="implemento" class="form-control mb-2" placeholder="Implemento" required>
+                {% endif %}
+                <input type="text" name="modelo" id="modelo_input" class="form-control mb-2" placeholder="Modelo (se autocompletará al ingresar chasis)" readonly>
+                <input type="text" name="fecha" class="form-control mb-2" placeholder="Fecha (DD/MM/YYYY)" required>
+                <select name="sector" id="sector_modal" class="form-select mb-2" required>
+                    <option value="SOLDADURA">SOLDADURA</option><option value="PINTURA">PINTURA</option><option value="MONTAJE">MONTAJE</option>
+                </select>
+                <select name="puesto" id="puesto_select" class="form-select" required>
+    <option value="">Seleccionar puesto...</option>
+</select>
+            </div>
+            <div class="modal-footer"><button type="submit" class="btn btn-success">Guardar</button></div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="modalEditar" tabindex="-1">
+    <div class="modal-dialog">
+        <form action="/admin/editar_fila" method="POST" class="modal-content">
+            <div class="modal-header bg-primary text-white"><h5>Editar Chasis</h5></div>
+            <div class="modal-body">
+                <input type="hidden" name="id" id="edit_id">
+                <div class="mb-2">
+                    <label class="form-label small fw-bold">N° Chasis (solo lectura)</label>
+                    <input type="text" name="nro_chasis" id="edit_chasis" class="form-control" readonly style="background-color: #f8f9fa; cursor: not-allowed;">
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small fw-bold">Implemento (solo lectura)</label>
+                    <input type="text" name="implemento" id="edit_implemento" class="form-control" readonly style="background-color: #f8f9fa; cursor: not-allowed;">
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small fw-bold">Modelo (solo lectura)</label>
+                    <input type="text" name="modelo" id="edit_modelo" class="form-control" readonly style="background-color: #f8f9fa; cursor: not-allowed;">
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small fw-bold">Fecha (editable)</label>
+                    <input type="text" name="fecha" id="edit_fecha" class="form-control" style="background-color: white; border-color: #0d6efd;">
+                    <small class="text-muted">Único campo modificable - los demás datos se consultan de la tabla de asignación</small>
+                </div>
+            </div>
+            <div class="modal-footer"><button type="submit" class="btn btn-primary">Guardar Cambios</button></div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade modal-delete" id="modalEliminar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header text-white"><h5>Eliminar Registro</h5></div>
+            <div class="modal-body text-center"><p>¿Eliminar chasis <strong id="chasisEliminarTxt"></strong>?</p></div>
+            <div class="modal-footer justify-content-center"><a id="linkEliminarFinal" href="#" class="btn btn-confirm">ELIMINAR</a></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalAvanzeMultiple" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark"><h5>⚡ Cambiar Estado - Múltiples Registros</h5></div>
+            <div class="modal-body">
+                <p class="fw-bold mb-3">Registros seleccionados: <span id="contadorMultiSelect">0</span></p>
+                <label class="form-label fw-bold">Nuevo Estado:</label>
+                <select id="selectEstadoMultiple" class="form-select form-select-lg mb-3">
+                    <option value="">-- Seleccionar --</option>
+                    <option value="PENDIENTE">PENDIENTE</option>
+                    <option value="TERMINADO">TERMINADO</option>
+                    <option value="REPROCESO">REPROCESO</option>
+                </select>
+                <div class="alert alert-info">
+                    <strong>⚠️ Nota:</strong> Todos los registros seleccionados cambiarán al estado elegido.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-warning fw-bold" onclick="ejecutarCambioMultiple()">Aplicar Cambio</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalAlertasCalidad" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning"><h5>Alertas de Calidad - Chasis <span id="chasisAlertaTitulo"></span></h5></div>
+            <div class="modal-body" id="contenedorAlertas"></div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const estructura = {{ estructura | tojson }};
+    const pSel = "{{ p_sel }}";
+
+    function actualizarPuestos() {
+        const sector = document.getElementById('sectorSelect').value;
+        const puestos = estructura[sector] || [];
+        const combo = document.getElementById('puestoSelect');
+        combo.innerHTML = '';
+        
+        // Agregar opción "Todos" al principio
+        const optTodos = document.createElement('option');
+        optTodos.value = '';
+        optTodos.textContent = 'Todos los puestos';
+        if (pSel === '') optTodos.selected = true;
+        combo.appendChild(optTodos);
+        
+        // Agregar los puestos del sector
+        puestos.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p; 
+            opt.textContent = p;
+            if (p === pSel) opt.selected = true;
+            combo.appendChild(opt);
+        });
+    }
+
+    function cambiarEstadoManual(id, nuevoEstado) {
+        // Mostrar indicador de carga en la fila específica
+        const fila = document.querySelector(`input[value="${id}"]`).closest('tr');
+        const selectElemento = fila.querySelector('select');
+        const botonGuardar = selectElemento;
+        
+        // Guardar el valor original por si hay error
+        const valorOriginal = selectElemento.value;
+        
+        // Mostrar estado de carga
+        selectElemento.disabled = true;
+        selectElemento.style.opacity = '0.6';
+        selectElemento.style.cursor = 'wait';
+        
+        // Enviar solicitud AJAX
+        fetch(`/admin/cambiar_estado/${id}?estado=${nuevoEstado}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    // Actualizar el valor del select
+                    selectElemento.value = nuevoEstado;
+                    
+                    // Actualizar las clases de color según el nuevo estado
+                    selectElemento.className = 'form-select form-select-sm fw-bold ';
+                    if (nuevoEstado === 'TERMINADO') {
+                        selectElemento.className += 'text-success';
+                    } else if (nuevoEstado === 'PENDIENTE') {
+                        selectElemento.className += 'text-warning';
+                    } else {
+                        selectElement.className += 'text-danger';
+                    }
+                    
+                    // Mostrar mensaje de éxito
+                    mostrarMensajeExito('Estado actualizado correctamente');
+                    
+                    // Actualizar el badge de responsable si es necesario
+                    const responsableSpan = fila.querySelector('.badge-responsable');
+                    if (responsableSpan) {
+                        // El backend debería devolver el nuevo responsable, pero por ahora mantenemos el actual
+                        // Podríamos hacer otra petición para obtener los datos actualizados si es necesario
+                    }
+                } else {
+                    // Restaurar el valor original en caso de error
+                    selectElemento.value = valorOriginal;
+                    mostrarMensajeError('Error al actualizar el estado');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                // Restaurar el valor original en caso de error
+                selectElemento.value = valorOriginal;
+                mostrarMensajeError('Error de conexión al actualizar el estado');
+            })
+            .finally(() => {
+                // Restaurar el estado del select
+                selectElemento.disabled = false;
+                selectElemento.style.opacity = '1';
+                selectElemento.style.cursor = 'default';
+            });
+    }
+    
+    // Función para mostrar mensaje de éxito
+    function mostrarMensajeExito(mensaje) {
+        // Crear un toast de éxito temporal
+        const toast = document.createElement('div');
+        toast.className = 'alert alert-success alert-dismissible fade show position-fixed';
+        toast.style.cssText = `
+            top: 20px; 
+            right: 20px; 
+            z-index: 9999; 
+            min-width: 300px;
+            max-width: 400px;
+            animation: slideInRight 0.3s ease-out;
+        `;
+        toast.innerHTML = `
+            <div class="d-flex align-items-center">
+                <i class="fas fa-check-circle me-2"></i>
+                <div>${mensaje}</div>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+        
+        document.body.appendChild(toast);
+        
+        // Auto-eliminar después de 3 segundos
+        setTimeout(() => {
+            toast.classList.remove();
+        }, 3000);
+    }
+    
+    // Función para mostrar mensaje de error
+    function mostrarMensajeError(mensaje) {
+        // Crear un toast de error temporal
+        const toast = document.createElement('div');
+        toast.className = 'alert alert-danger alert-dismissible fade show position-fixed';
+        toast.style.cssText = `
+            top: 20px; 
+            right: 20px; 
+            z-index: 9999; 
+            min-width: 300px;
+            max-width: 400px;
+            animation: slideInRight 0.3s ease-out;
+        `;
+        toast.innerHTML = `
+            <div class="d-flex align-items-center">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <div>${mensaje}</div>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+        
+        document.body.appendChild(toast);
+        
+        // Auto-eliminar después de 5 segundos
+        setTimeout(() => {
+            toast.classList.remove();
+        }, 5000);
+    }
+    
+    // Agregar animación CSS para los toasts
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+
+    function verAlertas(id, nroChasis) {
+        document.getElementById('chasisAlertaTitulo').innerText = nroChasis;
+        const contenedor = document.getElementById('contenedorAlertas');
+        contenedor.innerHTML = 'Cargando...';
+        new bootstrap.Modal(document.getElementById('modalAlertasCalidad')).show();
+        fetch(`/admin/obtener_alertas/${id}`).then(res => res.json()).then(data => {
+            contenedor.innerHTML = data.length ? '' : 'No hay alertas.';
+            data.forEach(alerta => {
+                contenedor.innerHTML += `<div><strong>${alerta.usuario}</strong>: ${alerta.descripcion}<br>
+                ${alerta.imagen ? `<img src="/static/uploads/${alerta.imagen}" class="img-alerta">` : ''}</div><hr>`;
+            });
+        });
+    }
+
+    function abrirModalEliminar(id, nroChasis) {
+        document.getElementById('chasisEliminarTxt').innerText = nroChasis;
+        document.getElementById('linkEliminarFinal').href = "/admin/delete/" + id;
+        new bootstrap.Modal(document.getElementById('modalEliminar')).show();
+    }
+
+    function abrirModalEditar(id, chasis, imp, mod, fecha) {
+        document.getElementById('edit_id').value = id;
+        document.getElementById('edit_chasis').value = chasis;
+        document.getElementById('edit_implemento').value = imp;
+        document.getElementById('edit_modelo').value = mod;
+        document.getElementById('edit_fecha').value = fecha;
+        new bootstrap.Modal(document.getElementById('modalEditar')).show();
+    }
+
+    // ========== FUNCIONES PARA CAMBIO MÚLTIPLE ==========
+    function actualizarContador() {
+        const seleccionados = document.querySelectorAll('.checkbox-plan:checked').length;
+        document.getElementById('contadorSeleccionados').textContent = seleccionados;
+        document.getElementById('seccionMultiple').style.display = seleccionados > 0 ? 'block' : 'none';
+    }
+
+    function seleccionarTodos(marcado) {
+        document.querySelectorAll('.checkbox-plan').forEach(cb => cb.checked = marcado);
+        actualizarContador();
+    }
+
+    function limpiarSeleccion() {
+        document.querySelectorAll('.checkbox-plan').forEach(cb => cb.checked = false);
+        document.getElementById('selectTodos').checked = false;
+        actualizarContador();
+    }
+    
+    function limpiarBusquedaChasis() {
+        document.getElementById('busquedaChasis').value = '';
+        // Enviar el formulario automáticamente para mostrar todos los resultados
+        const form = document.querySelector('form[method="GET"]');
+        if (form) {
+            form.submit();
+        }
+    }
+    
+    // Función para búsqueda en tiempo real
+    function busquedaEnTiempoReal() {
+        const busquedaValor = document.getElementById('busquedaChasis').value.trim();
+        const form = document.querySelector('form[method="GET"]');
+        
+        // Pequeño retraso para evitar muchas peticiones mientras escribe
+        clearTimeout(window.busquedaTimeout);
+        window.busquedaTimeout = setTimeout(() => {
+            if (form) {
+                form.submit();
+            }
+        }, 2000); // Esperar 2000ms (2 segundos) después de que el usuario deje de escribir
+    }
+
+    function abrirModalAvanzeMultiple() {
+        const seleccionados = document.querySelectorAll('.checkbox-plan:checked').length;
+        if (seleccionados === 0) {
+            alert('Selecciona al menos un registro');
+            return;
+        }
+        document.getElementById('contadorMultiSelect').textContent = seleccionados;
+        document.getElementById('selectEstadoMultiple').value = '';
+        new bootstrap.Modal(document.getElementById('modalAvanzeMultiple')).show();
+    }
+
+    function ejecutarCambioMultiple() {
+        const selectedIds = Array.from(document.querySelectorAll('.checkbox-plan:checked')).map(cb => cb.value);
+        const nuevoEstado = document.getElementById('selectEstadoMultiple').value;
+        
+        if (!nuevoEstado) {
+            mostrarMensajeError('Selecciona un estado');
+            return;
+        }
+
+        // Deshabilitar botón y mostrar carga
+        const botonEjecutar = event.target;
+        const textoOriginal = botonEjecutar.innerHTML;
+        botonEjecutar.disabled = true;
+        botonEjecutar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Actualizando...';
+
+        // Enviar solicitud AJAX
+        fetch('/admin/cambiar_estado_multiple', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids: selectedIds, estado: nuevoEstado })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                // Actualizar cada fila modificada
+                selectedIds.forEach(id => {
+                    const fila = document.querySelector(`input[value="${id}"]`).closest('tr');
+                    const selectElemento = fila.querySelector('select');
+                    
+                    // Actualizar el valor del select
+                    selectElemento.value = nuevoEstado;
+                    
+                    // Actualizar las clases de color según el nuevo estado
+                    selectElemento.className = 'form-select form-select-sm fw-bold ';
+                    if (nuevoEstado === 'TERMINADO') {
+                        selectElemento.className += 'text-success';
+                    } else if (nuevoEstado === 'PENDIENTE') {
+                        selectElemento.className += 'text-warning';
+                    } else {
+                        selectElemento.className += 'text-danger';
+                    }
+                    
+                    // Desmarcar el checkbox
+                    const checkbox = fila.querySelector('.checkbox-plan');
+                    if (checkbox) {
+                        checkbox.checked = false;
+                    }
+                });
+                
+                // Actualizar contador
+                actualizarContador();
+                
+                // Mostrar mensaje de éxito
+                mostrarMensajeExito(`✓ ${data.count} registros actualizados correctamente`);
+                
+                // Cerrar el modal de avance múltiple
+                const modalMultiple = bootstrap.Modal.getInstance(document.getElementById('modalAvanzeMultiple'));
+                modalMultiple.hide();
+                
+                // Resetear el select del modal
+                document.getElementById('selectEstadoMultiple').value = '';
+            } else {
+                mostrarMensajeError('Error: ' + data.error);
+            }
+        })
+        .catch(err => {
+            console.error('Error:', err);
+            mostrarMensajeError('Error de conexión al actualizar los estados');
+        })
+        .finally(() => {
+            // Restaurar el botón
+            botonEjecutar.disabled = false;
+            botonEjecutar.innerHTML = textoOriginal;
+        });
+    }
+
+    // Función para autocompletar modelo cuando se ingresa chasis
+    function autocompletarModelo() {
+        const chasisInput = document.getElementById('nro_chasis_input');
+        const modeloInput = document.getElementById('modelo_input');
+        
+        chasisInput.addEventListener('blur', function() {
+            const nroChasis = this.value.trim();
+            if (nroChasis.length > 0) {
+                // Usar el implemento actual si está disponible
+                const implemento = '{{ implemento | default("") }}';
+                const url = implemento ? `/admin/buscar_chasis/${nroChasis}/${implemento}` : `/admin/buscar_chasis/${nroChasis}`;
+                
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.datos.modelo) {
+                            modeloInput.value = data.datos.modelo;
+                        }
+                    })
+                    .catch(err => {
+                        console.log('Error al buscar chasis:', err);
+                    });
+            }
+        });
+    }
+
+    // Función para mostrar mensaje emergente en el modal
+    function mostrarMensajeModal(tipo, mensaje, detalles = null) {
+        // Eliminar cualquier emergente existente antes de mostrar uno nuevo
+        const emergentesExistentes = document.querySelectorAll('.alert-dismissible');
+        emergentesExistentes.forEach(emergente => emergente.remove());
+        
+        // Determinar el color según el tipo
+        let bgColor, borderColor, shadowColor;
+        if (tipo === 'success') {
+            bgColor = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+            borderColor = '#1e7e34';
+            shadowColor = 'rgba(40, 167, 69, 0.5)';
+        } else if (tipo === 'warning') {
+            bgColor = 'linear-gradient(135deg, #ffc107 0%, #e0a800 100%)';
+            borderColor = '#d39e00';
+            shadowColor = 'rgba(255, 193, 7, 0.5)';
+        } else if (tipo === 'info') {
+            bgColor = 'linear-gradient(135deg, #17a2b8 0%, #138496 100%)';
+            borderColor = '#0c5460';
+            shadowColor = 'rgba(23, 162, 184, 0.5)';
+        } else {
+            // danger (default)
+            bgColor = 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)';
+            borderColor = '#bd2130';
+            shadowColor = 'rgba(220, 53, 69, 0.5)';
+        }
+        
+        // Crear elemento de alerta con estilo personalizado y centrado
+        const alerta = document.createElement('div');
+        alerta.className = 'alert-dismissible fade show position-fixed';
+        alerta.style.cssText = `
+            top: 50%; 
+            left: 50%; 
+            transform: translate(-50%, -50%);
+            z-index: 9999; 
+            min-width: 450px;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            background: ${bgColor};
+            color: white;
+            border: 2px solid ${borderColor};
+            border-radius: 12px;
+            box-shadow: 0 8px 25px ${shadowColor};
+            font-weight: bold;
+            font-size: 16px;
+            padding: 20px 25px;
+            text-align: center;
+        `;
+        
+        // Construir el contenido del mensaje
+        let contenidoHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div style="flex: 1;">
+                    <div style="font-size: 18px; margin-bottom: 15px;">${mensaje}</div>
+        `;
+        
+        // Si hay detalles, mostrarlos
+        if (detalles) {
+            contenidoHTML += `
+                <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; margin-top: 10px; text-align: left;">
+                    <h6 style="margin-bottom: 10px; font-size: 14px;">📊 DETALLE DE LA CARGA:</h6>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 13px;">
+                        <div>✅ <strong>Agregados:</strong> ${detalles.nuevos}</div>
+                        <div>⚠️ <strong>Ya existían:</strong> ${detalles.omitidos}</div>
+                        <div>❌ <strong>No encontrados:</strong> ${detalles.no_existentes}</div>
+                        <div>📋 <strong>Total procesados:</strong> ${detalles.total}</div>
+                    </div>
+            `;
+            
+            // Si hay chasis no encontrados, mostrarlos en una lista
+            if (detalles.chasis_no_encontrados && detalles.chasis_no_encontrados.length > 0) {
+                contenidoHTML += `
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.3);">
+                        <h6 style="margin-bottom: 10px; font-size: 14px;">🚫 CHASIS NO ENCONTRADOS:</h6>
+                        <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; max-height: 200px; overflow-y: auto;">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 5px; font-size: 12px;">
+                `;
+                
+                detalles.chasis_no_encontrados.forEach(chasis => {
+                    contenidoHTML += `<div style="background: rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px; text-align: center;">${chasis}</div>`;
+                });
+                
+                contenidoHTML += `
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            contenidoHTML += `</div>`;
+        }
+        
+        contenidoHTML += `
+                </div>
+                <button type="button" class="btn-close" style="filter: brightness(0) invert(1); margin-left: 15px; flex-shrink: 0;" onclick="this.closest('.alert-dismissible').remove()"></button>
+            </div>
+        `;
+        
+        alerta.innerHTML = contenidoHTML;
+        
+        // Agregar al body
+        document.body.appendChild(alerta);
+        
+        // Eliminar auto-cierre - el emergente permanece hasta que el usuario lo cierre
+        // Ya no hay setTimeout para auto-eliminar
+    }
+
+    // Interceptar el envío del formulario para mostrar mensaje inmediato
+    document.addEventListener('DOMContentLoaded', function() {
+        // Manejar formulario de carga manual
+        const formManual = document.querySelector('#modalCargaManual form');
+        if (formManual) {
+            formManual.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Enviar el formulario con fetch
+                const formData = new FormData(this);
+                
+                fetch(this.action, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.text())
+                .then(data => {
+                    // Mostrar mensaje de éxito
+                    mostrarMensajeModal('success', '✅ Chasis agregado correctamente al plan de producción');
+                    
+                    // Cerrar el modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('modalCargaManual'));
+                    modal.hide();
+                    
+                    // Limpiar formulario
+                    this.reset();
+                    
+                    // Redirigir después de 1 segundo
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                })
+                .catch(error => {
+                    mostrarMensajeModal('warning', '❌ Error al agregar el chasis');
+                });
+            });
+        }
+
+        // Manejar formulario de carga Excel
+        const formExcel = document.querySelector('#modalExcel form');
+        if (formExcel) {
+            formExcel.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Validar que se haya seleccionado un archivo
+                const fileInput = this.querySelector('input[name="file"]');
+                if (!fileInput.files || fileInput.files.length === 0) {
+                    mostrarMensajeModal('warning', '⚠️ Por favor selecciona un archivo Excel');
+                    return;
+                }
+                
+                // Mostrar mensaje de procesamiento
+                mostrarMensajeModal('info', '📤 Procesando archivo Excel...');
+                
+                // Enviar el formulario con fetch
+                const formData = new FormData(this);
+                
+                fetch(this.action, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Cerrar el modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('modalExcel'));
+                    modal.hide();
+                    
+                    // Limpiar formulario
+                    this.reset();
+                    
+                    if (data.success) {
+                        // Calcular total procesados
+                        const total = data.contador_nuevos + data.contador_omitidos + data.contador_no_existentes;
+                        
+                        // Mostrar mensaje de éxito con detalles y lista de chasis no encontrados
+                        mostrarMensajeModal('success', '✅ Archivo Excel procesado correctamente', {
+                            nuevos: data.contador_nuevos,
+                            omitidos: data.contador_omitidos,
+                            no_existentes: data.contador_no_existentes,
+                            total: total,
+                            chasis_no_encontrados: data.chasis_no_encontrados || []
+                        });
+                    } else {
+                        // Mostrar mensaje de error
+                        mostrarMensajeModal('danger', data.message);
+                    }
+                    
+                    // Ya no redirigimos automáticamente - el usuario debe cerrar el emergente
+                    // El usuario puede recargar la página manualmente cuando quiera ver los cambios
+                })
+                .catch(error => {
+                    mostrarMensajeModal('danger', '❌ Error al procesar el archivo Excel');
+                });
+            });
+        }
+    });
+
+    // Función para actualizar puestos del modal según el sector
+    function actualizarPuestosModal() {
+        const sectorModal = document.getElementById('sector_modal');
+        const puestoSelect = document.getElementById('puesto_select');
+        
+        function cargarPuestos(sector) {
+            puestoSelect.innerHTML = '<option value="">Seleccionar puesto...</option>';
+            
+            let puestos = [];
+            if (sector === 'SOLDADURA') {
+                puestos = ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9'];
+            } else if (sector === 'PINTURA') {
+                puestos = ['LAVADO', 'PINTURA'];
+            } else if (sector === 'MONTAJE') {
+                puestos = ['M1', 'M2', 'M3', 'M4', 'M5'];
+            }
+            
+            puestos.forEach(puesto => {
+                const option = document.createElement('option');
+                option.value = puesto;
+                option.textContent = puesto;
+                puestoSelect.appendChild(option);
+            });
+        }
+        
+        // Cargar puestos iniciales cuando se abre el modal
+        cargarPuestos(sectorModal.value);
+        
+        // Actualizar puestos cuando cambia el sector
+        sectorModal.addEventListener('change', function() {
+            cargarPuestos(this.value);
+        });
+    }
+
+    document.getElementById('sectorSelect').addEventListener('change', actualizarPuestos);
+    document.getElementById('sector_modal').addEventListener('change', actualizarPuestosModal);
+    document.getElementById('modalCargaManual').addEventListener('show.bs.modal', function() {
+        actualizarPuestosModal();
+    });
+    window.onload = function() {
+        actualizarPuestos();
+        autocompletarModelo();
+    };
+</script>
+</body>
+</html>

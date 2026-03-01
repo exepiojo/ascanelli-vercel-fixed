@@ -1,0 +1,2326 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() if csrf_token else '' }}">
+    <title>Planilla de Producción - {{ implemento }} - Ascanelli</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            overflow-x: hidden;
+        }
+        
+        .header-production {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            padding: 30px 0;
+            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+        }
+        
+        .breadcrumb-custom {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 10px 20px;
+            margin-bottom: 30px;
+        }
+        
+        .breadcrumb-custom a {
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+        }
+        
+        .breadcrumb-custom a:hover {
+            color: white;
+        }
+        
+        .breadcrumb-custom .active {
+            color: white;
+            font-weight: 600;
+        }
+        
+        .planilla-table {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            overflow: hidden;
+            width: 100%;
+            max-width: 100vw;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .table thead th {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            border: none;
+            font-weight: 600;
+            padding: 15px 10px;
+            font-size: 0.9rem;
+        }
+        
+        .table tbody td {
+            padding: 12px 10px;
+            vertical-align: middle;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .chasis-number {
+            font-weight: 700;
+            color: #007bff;
+            font-size: 1.1rem;
+        }
+        
+        .estado-badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .estado-pendiente { background: #ffc107; color: #000; }
+        .estado-en-progreso { background: #17a2b8; color: white; }
+        .estado-terminado { background: #28a745; color: white; }
+        .estado-cancelado { background: #dc3545; color: white; }
+        
+        .action-buttons {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 1000;
+        }
+        
+        .btn-float {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-float:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 123, 255, 0.4);
+        }
+        
+        /* Estilos para columnas inmovilizadas */
+        .table-responsive-wrapper {
+            position: relative;
+            overflow: hidden;
+            border-radius: 10px;
+            width: 100%;
+            max-width: 100vw;
+            margin: 0;
+        }
+        
+        .table-container {
+            display: flex;
+            min-width: 0;
+            width: 100%;
+            max-width: 100vw;
+        }
+        
+        .table-fixed {
+            flex: 0 0 auto;
+            position: sticky;
+            left: 0;
+            z-index: 10;
+            background: white;
+            border-right: 2px solid #dee2e6;
+        }
+        
+        .table-scrollable {
+            flex: 1;
+            overflow-x: auto;
+            min-width: 0;
+            width: 100%;
+        }
+        
+        .table-scrollable table {
+            width: 100%;
+            min-width: 1400px; /* Aumentar de 1200px a 1400px para nombres completos */
+        }
+        
+        .table-fixed th,
+        .table-fixed td {
+            min-width: 80px; /* Reducir de 120px a 80px */
+            max-width: 100px; /* Agregar max-width */
+            border-right: none;
+            padding: 3px 2px; /* Igual que scrollables */
+            vertical-align: middle;
+            height: 30px; /* Asegurar misma altura que scrollables */
+            line-height: 30px; /* Forzar altura de línea */
+        }
+        
+        /* MODELO con ancho reducido */
+        .table-fixed th:nth-child(4),
+        .table-fixed td:nth-child(4) {
+            min-width: 60px; /* Aumentar ancho de MODELO 50% */
+            max-width: 60px;
+            width: 60px;
+        }
+        
+        /* Encabezados fijos más pequeños */
+        .table-fixed th {
+            font-size: 8px; /* Igual que scrollables para alinear */
+            font-weight: 600;
+        }
+        
+        /* Datos fijos más grandes */
+        .table-fixed td {
+            font-size: 13px; /* Datos fijos más grandes */
+            font-weight: 500;
+        }
+        
+        .table-scrollable th,
+        .table-scrollable td {
+            border-left: none;
+            padding: 3px 2px; /* Mantener consistencia con fijos */
+            vertical-align: middle;
+            height: 30px; /* Reducir de 45px a 30px */
+            line-height: 30px; /* Forzar altura de línea */
+            text-align: center;
+            font-size: 11px;
+            min-width: 45px; /* Aumentar para nombres completos */
+        }
+        
+        /* Encabezados más pequeños - sin saltos de línea */
+        .table-scrollable th {
+            font-size: 8px; /* Aumentar de 7px a 8px para mejor legibilidad */
+            font-weight: 600;
+            white-space: nowrap; /* Evitar saltos de línea */
+            overflow: hidden; /* Ocultar texto que no cabe */
+            text-overflow: ellipsis; /* Puntos suspensivos si no cabe */
+            padding: 3px 2px; /* Igual que fijos */
+            line-height: 30px; /* Forzar altura de línea igual a fijos */
+        }
+        
+        /* Columnas de producción (con círculos) - tamaño fijo ultra pequeño */
+        .table-scrollable th.puesto-produccion,
+        .table-scrollable td.puesto-produccion {
+            width: 35px;
+            min-width: 35px;
+            max-width: 35px;
+        }
+        
+        /* Columnas M1-M5 - ancho aumentado 2px */
+        .table-scrollable th.puesto-produccion:nth-child(19),
+        .table-scrollable th.puesto-produccion:nth-child(20),
+        .table-scrollable th.puesto-produccion:nth-child(21),
+        .table-scrollable th.puesto-produccion:nth-child(22),
+        .table-scrollable th.puesto-produccion:nth-child(23),
+        .table-scrollable td.puesto-produccion:nth-child(19),
+        .table-scrollable td.puesto-produccion:nth-child(20),
+        .table-scrollable td.puesto-produccion:nth-child(21),
+        .table-scrollable td.puesto-produccion:nth-child(22),
+        .table-scrollable td.puesto-produccion:nth-child(23) {
+            width: 37px;
+            min-width: 37px;
+            max-width: 37px;
+        }
+        
+        /* Columnas M4-M5 - ancho 42px */
+        .table-scrollable th.puesto-produccion:nth-child(24),
+        .table-scrollable th.puesto-produccion:nth-child(25),
+        .table-scrollable td.puesto-produccion:nth-child(24),
+        .table-scrollable td.puesto-produccion:nth-child(25) {
+            width: 42px;
+            min-width: 42px;
+            max-width: 42px;
+        }
+        
+        /* Columnas de datos (texto) - ultra simple */
+        .table-scrollable td.dato-texto {
+            font-size: 12px;
+            font-weight: 600;
+            text-align: left;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding: 4px 2px;
+        }
+        
+        .table-scrollable th:first-child,
+        .table-scrollable td:first-child {
+            border-left: 1px solid #dee2e6;
+        }
+        
+        /* Botones de control fijos sobre la tabla */
+        .table-controls {
+            position: sticky;
+            top: 0;
+            background: white;
+            padding: 10px 0;
+            z-index: 100;
+            border-bottom: 2px solid #dee2e6;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .table-controls .btn {
+            font-size: 12px;
+            padding: 6px 12px;
+        }
+        
+        .table-controls .badge {
+            font-size: 11px;
+            padding: 6px 10px;
+        }
+        
+        /* Columnas OBSERVACIONES con texto multilínea */
+        .caracteristica:has([data-observaciones]),
+        .entrega:has([data-observaciones]) {
+            max-width: 320px !important;
+            min-width: 280px !important;
+            width: 320px !important;
+        }
+        
+        .caracteristica:has([data-observaciones]) div,
+        .entrega:has([data-observaciones]) div {
+            white-space: normal !important;
+            word-wrap: break-word !important;
+            overflow-wrap: break-word !important;
+            hyphens: auto !important;
+            text-align: left !important;
+            padding: 2px !important;
+            line-height: 1.2 !important;
+            height: 32px !important; /* Forzar altura fija */
+            max-height: 32px !important; /* Forzar altura máxima */
+            overflow-y: auto !important;
+            box-sizing: border-box !important;
+        }
+        
+        /* Primera columna (checkbox) ultra estrecha */
+        .table-fixed th:nth-child(1),
+        .table-fixed td:nth-child(1) {
+            min-width: 25px !important;
+            max-width: 25px !important;
+            width: 25px !important;
+            padding: 2px !important;
+        }
+        
+        /* Todos los datos centrados en la celda */
+        .table-scrollable td,
+        .table-fixed td {
+            text-align: center !important;
+            vertical-align: middle;
+        }
+        
+        /* Círculos de estado para puestos de producción - ultra simple */
+        .estado-circle {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: inline-block;
+            margin: 0 auto;
+        }
+        
+        .estado-circle.cumplido {
+            background: #28a745;
+            border: 2px solid #1e7e34;
+        }
+        
+        .estado-circle.pendiente {
+            background: #dc3545;
+            border: 2px solid #bd2130;
+        }
+        
+        .estado-circle.en-progreso {
+            background: #ffc107;
+            border: 2px solid #e0a800;
+        }
+        
+        .table-fixed tr,
+        .table-scrollable tr {
+            height: 30px; /* Reducir de 45px a 30px (33% menor) */
+        }
+        
+        .table-fixed tr:hover,
+        .table-scrollable tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        /* Scrollbar personalizado */
+        .table-scrollable::-webkit-scrollbar {
+            height: 8px;
+        }
+        
+        .table-scrollable::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        
+        .table-scrollable::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        
+        .table-scrollable::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        
+        /* Sincronización de alturas de fila */
+        .table-fixed th,
+        .table-scrollable th {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            border: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .table-fixed th {
+            z-index: 30;
+        }
+        
+        /* Asegurar que las filas estén alineadas */
+        .table-fixed thead tr,
+        .table-scrollable thead tr {
+            display: table-row;
+            height: 40px; /* Altura fija para ambas tablas */
+            min-height: 40px;
+            max-height: 40px;
+        }
+        
+        .table-fixed thead tr th,
+        .table-scrollable thead tr th {
+            display: table-cell;
+            vertical-align: middle;
+            padding: 4px 6px; /* Ajustar padding */
+            height: 40px; /* Altura fija para ambas tablas */
+            min-height: 40px;
+            max-height: 40px;
+            line-height: 32px; /* Altura de línea ajustada */
+            white-space: nowrap; /* Evitar saltos de línea */
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .table-fixed tbody tr,
+        .table-scrollable tbody tr {
+            display: table-row;
+            height: 40px; /* Altura fija para ambas tablas */
+            min-height: 40px;
+            max-height: 40px;
+        }
+        
+        .table-fixed tbody tr td,
+        .table-scrollable tbody tr td {
+            display: table-cell;
+            vertical-align: middle;
+            padding: 4px 6px; /* Ajustar padding */
+            height: 40px; /* Altura fija para ambas tablas */
+            min-height: 40px;
+            max-height: 40px;
+            line-height: 32px; /* Altura de línea ajustada */
+            white-space: nowrap; /* Evitar saltos de línea */
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        /* Asegurar que los círculos de estado estén centrados */
+        .estado-circle {
+            display: inline-block;
+            margin: 0 auto;
+        }
+        
+        /* Scroll Superior Sincronizado - Simplificado */
+        .scroll-top-wrapper {
+            width: 100%;
+            margin-bottom: 0;
+        }
+        
+        .scroll-top {
+            width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            height: 20px;
+            background: #f8f9fa;
+        }
+        
+        .scroll-content {
+            width: 1400px; /* Aumentar de 1200px a 1400px */
+            height: 1px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #6c757d;
+        }
+        
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            color: #dee2e6;
+        }
+        
+        .empty-state h3 {
+            color: #495057;
+            margin-bottom: 1rem;
+        }
+        
+        .stats-icon {
+            font-size: 2rem;
+            margin-right: 10px;
+        }
+        
+        .stats-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #007bff;
+        }
+        
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+        
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header-production">
+        <div class="container-fluid" style="padding: 0 15px;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h2 mb-2">
+                        <span class="implemento-icon">🚛</span>
+                        Planilla de Producción - {{ implemento }}
+                    </h1>
+                    <p class="mb-0 opacity-75">Gestión de chasis y seguimiento de producción</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('planilla_produccion_seleccion') }}" class="btn btn-outline-light btn-lg">
+                        <i class="fas fa-arrow-left me-2"></i>
+                        Volver a Selección
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Breadcrumb -->
+            <nav aria-label="breadcrumb" class="breadcrumb-custom">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('seleccion_admin') }}">
+                            <i class="fas fa-home me-1"></i> Panel Admin
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('admin_opciones_produccion') }}">
+                            <i class="fas fa-industry me-1"></i> Producción
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('planilla_produccion_seleccion') }}">
+                            <i class="fas fa-clipboard-list me-1"></i> Planilla de Producción
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item active" aria-current="page">
+                        <i class="fas fa-clipboard-list me-1"></i> {{ implemento }}
+                    </li>
+                </ol>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Contenido Principal -->
+    <div class="container-fluid my-5" style="padding: 0 15px;">
+        <!-- Botones de acción flotantes sobre la tabla -->
+        <div class="table-controls mb-3">
+            <div class="d-flex justify-content-start align-items-center">
+                <div class="action-buttons">
+                    <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#agregarFilaModal" title="Agregar fila manual">
+                        <i class="fas fa-plus me-2"></i>
+                        Agregar Fila Manual
+                    </button>
+                    <button class="btn btn-warning btn-sm ms-2" onclick="editarSeleccionados()" title="Editar seleccionado" id="btnEditarSeleccionado" disabled>
+                        <i class="fas fa-edit me-2"></i>
+                        Editar Fila
+                    </button>
+                    <button class="btn btn-danger btn-sm ms-2" onclick="eliminarSeleccionados()" title="Eliminar seleccionados" id="btnEliminarSeleccionados" disabled>
+                        <i class="fas fa-trash me-2"></i>
+                        Eliminar Seleccionados
+                    </button>
+                    <button class="btn btn-primary btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#importarExcelModal">
+                        <i class="fas fa-file-excel me-2"></i>
+                        Importar Excel
+                    </button>
+                    <span class="badge bg-info ms-3">
+                        <i class="fas fa-info-circle me-1"></i>
+                        <span id="contadorSeleccionados">0</span> seleccionados
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botones de Control de Columnas -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="d-flex gap-2 flex-wrap">
+                    <button class="btn btn-outline-primary btn-sm" id="toggleCaracteristicas" onclick="toggleCaracteristicas()">
+                        <i class="fas fa-list me-2"></i>
+                        Ver Características
+                    </button>
+                    <button class="btn btn-outline-success btn-sm" id="toggleAvances" onclick="toggleAvances()">
+                        <i class="fas fa-tasks me-2"></i>
+                        Ver Avances
+                    </button>
+                    <button class="btn btn-outline-warning btn-sm" id="toggleEntrega" onclick="toggleEntrega()">
+                        <i class="fas fa-truck me-2"></i>
+                        Ver Entrega
+                    </button>
+                    <span class="badge bg-info ms-3">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Usa los botones para mostrar/ocultar columnas
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Búsqueda Simple -->
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="fas fa-search"></i>
+                    </span>
+                    <input type="text" class="form-control" id="busquedaGlobal" placeholder="Buscar en todas las columnas..." onkeyup="realizarBusquedaGlobal()">
+                    <button class="btn btn-outline-secondary" type="button" onclick="limpiarBusquedaGlobal()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla de Planilla Horizontal con Columnas Exactas -->
+        <div class="planilla-table" style="margin: 0; padding: 0; width: 100%;">
+            {% if planilla_datos %}
+            <!-- Scroll Superior Sincronizado -->
+            <div class="scroll-top-wrapper">
+                <div class="scroll-top" id="scrollTop">
+                    <div class="scroll-content"></div>
+                </div>
+            </div>
+            
+            <div class="table-responsive-wrapper">
+                <!-- Tabla con columnas inmovilizadas -->
+                <div class="table-container">
+                    <div class="table-fixed">
+                        <table class="table table-bordered table-striped table-hover mb-0" style="font-size: 12px;">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th style="width: 10px; text-align: center; padding: 0px;"></th>
+                                    <th style="font-size: 10px; font-weight: 600;">LANZAMIENTO</th>
+                                    <th style="font-size: 11px; font-weight: 600; width: 49px; min-width: 49px; text-align: center;">N° CHASIS</th>
+                                    <th style="font-size: 11px; font-weight: 600;">MODELO</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Filas con datos reales -->
+                                {% for item in planilla_datos %}
+                                <tr>
+                                    <td style="width: 10px; text-align: center; padding: 0px;">
+                                        <input type="checkbox" class="row-checkbox" value="{{ item.id }}" style="transform: scale(0.8);" onchange="updateSelectAll()">
+                                    </td>
+                                    <td style="font-size: 9px; font-weight: 500;">{{ item.lanzamiento or '-' }}</td>
+                                    <td class="chasis-number">{{ item.nro_chasis or '-' }}</td>
+                                    <td>{{ item.modelo or '-' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Tabla con scroll horizontal -->
+                    <div class="table-scrollable" id="tableScrollable">
+                        <table class="table table-bordered table-striped table-hover mb-0" style="font-size: 12px; width: 100%; min-width: 1200px;">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th class="caracteristica">CLIENTE</th>
+                                    <th class="caracteristica">TUBO</th>
+                                    <th class="caracteristica">ENCAMISADO</th>
+                                    <th class="caracteristica" style="min-width: 60px; max-width: 60px; width: 60px; font-size: 12px; line-height: 1.0; padding: 2px 1px;">
+                                    <div style="text-align: center; height: 25px; display: flex; flex-direction: column; justify-content: center;">
+                                        <div style="font-size: 12px; font-weight: 600;">TIPO</div>
+                                        <div style="font-size: 12px; font-weight: 600;">TUBO</div>
+                                    </div>
+                                </th>
+                                    <th class="caracteristica" style="min-width: 80px; max-width: 80px; width: 80px; font-size: 12px; line-height: 1.0; padding: 2px 1px;">
+                                    <div style="text-align: center; height: 25px; display: flex; flex-direction: column; justify-content: center;">
+                                        <div style="font-size: 12px; font-weight: 600;">TAMAÑO</div>
+                                        <div style="font-size: 12px; font-weight: 600;">CUBIERTA</div>
+                                    </div>
+                                </th>
+                                    <th class="caracteristica" style="min-width: 80px; max-width: 80px; width: 80px; font-size: 12px; line-height: 1.0; padding: 2px 1px;">
+                                    <div style="text-align: center; height: 25px; display: flex; flex-direction: column; justify-content: center;">
+                                        <div style="font-size: 12px; font-weight: 600;">MARCA</div>
+                                        <div style="font-size: 12px; font-weight: 600;">CUBIERTAS</div>
+                                    </div>
+                                </th>
+                                    <th class="caracteristica">COLOR</th>
+                                    <th class="caracteristica">BALANZA</th>
+                                    <th class="caracteristica">OBSERVACIONES</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">P1</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">P2</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">P3</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">P4</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">P5</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">P6</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">P7</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">P8</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">P9</th>
+                                    <th class="puesto-produccion" style="font-size: 9px; writing-mode: vertical-rl; text-orientation: mixed; height: 30px; padding: 2px 1px;">LAVADO</th>
+                                    <th class="puesto-produccion" style="font-size: 9px; writing-mode: vertical-rl; text-orientation: mixed; height: 30px; padding: 2px 1px;">PINTURA</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">M1</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">M2</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">M3</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">M4</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">M5</th>
+                                    <th class="entrega">ENTREGADA</th>
+                                    <th class="entrega">FECHA ENTREGA</th>
+                                    <th class="entrega">PEDIDO</th>
+                                    <th class="entrega">LIBERADA VENTAS</th>
+                                    <th class="entrega">LLANTAS OK</th>
+                                    <th class="entrega">CUBIERTAS OK</th>
+                                    <th class="entrega">OBSERVACIÓN 2</th>
+                                    <th class="entrega">PROVEEDOR DE SIN FIN</th>
+                                    <th class="entrega">DIAS EN CONSIGNACIÓN</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Los datos se renderizan desde JavaScript para mantener sincronización -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <!-- Contenedor de Paginación -->
+            <div class="card-footer bg-light" id="paginacionInfo">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span>Cargando...</span>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary" disabled>
+                            <i class="fas fa-chevron-left"></i> Anterior
+                        </button>
+                        <span class="mx-2">Página 1 de 1</span>
+                        <button class="btn btn-sm btn-outline-primary" disabled>
+                            Siguiente <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-clipboard-list"></i>
+                <h3>No hay chasis registrados</h3>
+                <p class="text-muted">No se encontraron chasis para el implemento {{ implemento }}</p>
+                <a href="{{ url_for('admin_plan') }}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>
+                    Agregar Chasis
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Datos de la planilla (pasados desde Flask)
+        const planillaDatos = {{ planilla_datos | tojson }};
+        
+        // JavaScript para sincronizar tablas y renderizar datos
+        document.addEventListener('DOMContentLoaded', function() {
+            const scrollTop = document.getElementById('scrollTop');
+            const tableScrollable = document.getElementById('tableScrollable');
+            const toggleAvances = document.getElementById('toggleAvances');
+            const toggleAvancesText = document.getElementById('toggleAvancesText');
+            
+            // Renderizar datos en la tabla scrollable
+            renderizarDatosScrollable();
+            
+            if (scrollTop && tableScrollable) {
+                // Sincronizar scroll simple
+                tableScrollable.addEventListener('scroll', function() {
+                    scrollTop.scrollLeft = this.scrollLeft;
+                });
+                
+                scrollTop.addEventListener('scroll', function() {
+                    tableScrollable.scrollLeft = this.scrollLeft;
+                });
+                
+                // Ajustar ancho del scroll superior
+                const scrollContent = scrollTop.querySelector('.scroll-content');
+                if (scrollContent) {
+                    scrollContent.style.width = '1400px'; /* Actualizar a 1400px */
+                }
+            }
+            
+            // Funcionalidad para ocultar/mostrar avances
+            if (toggleAvances && toggleAvancesText) {
+                let avancesVisible = true;
+                
+                toggleAvances.addEventListener('click', function() {
+                    const columnasAvances = document.querySelectorAll('.puesto-produccion');
+                    const icon = this.querySelector('i');
+                    
+                    if (avancesVisible) {
+                        // Ocultar columnas de avances
+                        columnasAvances.forEach(col => {
+                            col.style.display = 'none';
+                        });
+                        toggleAvancesText.textContent = 'Ver Avances';
+                        icon.className = 'fas fa-eye-slash me-2';
+                        avancesVisible = false;
+                    } else {
+                        // Mostrar columnas de avances
+                        columnasAvances.forEach(col => {
+                            col.style.display = '';
+                        });
+                        toggleAvancesText.textContent = 'Ocultar Avances';
+                        icon.className = 'fas fa-eye me-2';
+                        avancesVisible = true;
+                    }
+                });
+            }
+            
+            // Funcionalidad para ocultar/mostrar características
+            const toggleCaracteristicas = document.getElementById('toggleCaracteristicas');
+            const toggleCaracteristicasText = document.getElementById('toggleCaracteristicasText');
+            
+            if (toggleCaracteristicas && toggleCaracteristicasText) {
+                let caracteristicasVisible = true;
+                
+                toggleCaracteristicas.addEventListener('click', function() {
+                    const columnasCaracteristicas = document.querySelectorAll('.caracteristica');
+                    const icon = this.querySelector('i');
+                    
+                    if (caracteristicasVisible) {
+                        // Ocultar columnas de características
+                        columnasCaracteristicas.forEach(col => {
+                            col.style.display = 'none';
+                        });
+                        toggleCaracteristicasText.textContent = 'Ver Características';
+                        icon.className = 'fas fa-list-ul me-2';
+                        caracteristicasVisible = false;
+                    } else {
+                        // Mostrar columnas de características
+                        columnasCaracteristicas.forEach(col => {
+                            col.style.display = '';
+                        });
+                        toggleCaracteristicasText.textContent = 'Ocultar Características';
+                        icon.className = 'fas fa-list me-2';
+                        caracteristicasVisible = true;
+                    }
+                });
+            }
+        });
+        
+        // Configuración de paginación
+        const TAMANO_PAGINA = 50; // Mostrar 50 filas por página
+        let paginaActual = 1;
+        let datosFiltrados = [];
+        
+        // Función para renderizar datos con paginación
+        function renderizarDatosPaginados() {
+            const tbody = document.querySelector('#tableScrollable tbody');
+            const tbodyFixed = document.querySelector('.table-fixed tbody');
+            if (!tbody || !tbodyFixed) return;
+            
+            // Limpiar contenido existente
+            tbody.innerHTML = '';
+            tbodyFixed.innerHTML = '';
+            
+            // Calcular índices para la página actual
+            const inicio = (paginaActual - 1) * TAMANO_PAGINA;
+            const fin = Math.min(inicio + TAMANO_PAGINA, datosFiltrados.length);
+            
+            // Renderizar solo las filas de la página actual
+            for (let i = inicio; i < fin; i++) {
+                const item = datosFiltrados[i];
+                if (!item) continue;
+                
+                // Crear fila para tabla scrollable
+                const trScrollable = document.createElement('tr');
+                trScrollable.dataset.index = i;
+                trScrollable.innerHTML = generarFilaHTML(item, i, false);
+                tbody.appendChild(trScrollable);
+                
+                // Crear fila para tabla fija (checkboxes)
+                const trFixed = document.createElement('tr');
+                trFixed.innerHTML = generarFilaHTML(item, i, true);
+                tbodyFixed.appendChild(trFixed);
+            }
+            
+            // Actualizar información de paginación
+            actualizarInfoPaginacion();
+        }
+        
+        // Función para generar HTML de una fila
+        function generarFilaHTML(item, index, esFija) {
+            // Pre-calcular todos los estados de puestos para evitar llamadas repetitivas
+            const estadosPuestosHTML = {};
+            const puestos = ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9', 'LAVADO', 'PINTURA', 'M1', 'M2', 'M3', 'M4', 'M5'];
+            
+            for (const puesto of puestos) {
+                const estadosPorPuesto = item.estados_por_puesto || {};
+                const estadoPuesto = estadosPorPuesto[puesto];
+                
+                if (estadoPuesto === 'TERMINADO') {
+                    estadosPuestosHTML[puesto] = `<div class="estado-circle cumplido" title="${puesto}: TERMINADO"></div>`;
+                } else if (estadoPuesto === 'EN_PROGRESO') {
+                    estadosPuestosHTML[puesto] = `<div class="estado-circle en-progreso" title="${puesto}: EN_PROGRESO"></div>`;
+                } else {
+                    estadosPuestosHTML[puesto] = `<div class="estado-circle pendiente" title="${puesto}: PENDIENTE"></div>`;
+                }
+            }
+            
+            if (esFija) {
+                // Tabla fija - solo checkbox y columnas clave
+                return `
+                    <td><input type="checkbox" class="form-check-input checkbox-fila" data-id="${item.id}"></td>
+                    <td class="chasis-number">${item.nro_chasis || '-'}</td>
+                    <td class="text-center">
+                        <span class="estado-circle estado-${item.estado_color || 'danger'}" 
+                              title="${item.estado_texto || 'PENDIENTE'}"></span>
+                    </td>
+                    <td class="caracteristica">${item.cliente || '-'}</td>
+                    <td class="caracteristica">${item.tubo || '-'}</td>
+                    <td class="caracteristica">${item.color || '-'}</td>
+                `;
+            } else {
+                // Tabla scrollable - todas las columnas con estados pre-calculados
+                return `
+                    <td class="caracteristica">${item.cliente || '-'}</td>
+                    <td class="caracteristica">${item.tubo || '-'}</td>
+                    <td class="caracteristica">${item.encamisado || '-'}</td>
+                    <td class="caracteristica">${item.tipo_tubo || '-'}</td>
+                    <td class="caracteristica">${item.tamano_cubierta || '-'}</td>
+                    <td class="caracteristica">${item.marca_cubiertas || '-'}</td>
+                    <td class="caracteristica">${item.color || '-'}</td>
+                    <td class="caracteristica">${item.balanza || '-'}</td>
+                    <td class="caracteristica"><div data-observaciones>${item.observaciones || '-'}</div></td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['P1']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['P2']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['P3']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['P4']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['P5']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['P6']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['P7']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['P8']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['P9']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['LAVADO']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['PINTURA']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['M1']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['M2']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['M3']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['M4']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['M5']}</td>
+                    <td class="caracteristica">${item.entregada || '-'}</td>
+                    <td class="caracteristica">${item.fecha_entrega || '-'}</td>
+                    <td class="caracteristica">${item.pedido || '-'}</td>
+                    <td class="caracteristica">${item.liberada_ventas || '-'}</td>
+                    <td class="caracteristica">${item.llantas_ok || '-'}</td>
+                    <td class="caracteristica">${item.cubiertas_ok || '-'}</td>
+                    <td class="caracteristica"><div data-observaciones>${item.observaciones_2 || '-'}</div></td>
+                    <td class="caracteristica">${item.proveedor_sinfin || '-'}</td>
+                    <td class="caracteristica">${item.dias_consignacion || '-'}</td>
+                `;
+            }
+        }
+        
+        // Función para actualizar información de paginación
+        function actualizarInfoPaginacion() {
+            const totalPaginas = Math.ceil(datosFiltrados.length / TAMANO_PAGINA);
+            const infoDiv = document.getElementById('paginacionInfo');
+            
+            if (infoDiv) {
+                infoDiv.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>Mostrando ${((paginaActual - 1) * TAMANO_PAGINA) + 1} - ${Math.min(paginaActual * TAMANO_PAGINA, datosFiltrados.length)} de ${datosFiltrados.length} registros</span>
+                        <div>
+                            <button class="btn btn-sm btn-outline-primary" onclick="cambiarPagina(${paginaActual - 1})" ${paginaActual === 1 ? 'disabled' : ''}>
+                                <i class="fas fa-chevron-left"></i> Anterior
+                            </button>
+                            <span class="mx-2">Página ${paginaActual} de ${totalPaginas}</span>
+                            <button class="btn btn-sm btn-outline-primary" onclick="cambiarPagina(${paginaActual + 1})" ${paginaActual === totalPaginas ? 'disabled' : ''}>
+                                Siguiente <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        // Función para cambiar de página
+        function cambiarPagina(nuevaPagina) {
+            const totalPaginas = Math.ceil(datosFiltrados.length / TAMANO_PAGINA);
+            if (nuevaPagina >= 1 && nuevaPagina <= totalPaginas) {
+                paginaActual = nuevaPagina;
+                renderizarDatosPaginados();
+                // Scroll al inicio de la tabla
+                document.querySelector('.table-scrollable').scrollTop = 0;
+            }
+        }
+        
+        // Función original de renderizado (ahora con paginación)
+        function renderizarDatosScrollable() {
+            // Inicializar datos filtrados con todos los datos
+            datosFiltrados = [...planillaDatos];
+            paginaActual = 1;
+            renderizarDatosPaginados();
+        }
+        
+        // Función de búsqueda global actualizada para paginación
+        function realizarBusquedaGlobal() {
+            const textoBusqueda = document.getElementById('busquedaGlobal').value.toLowerCase().trim();
+            
+            if (textoBusqueda === '') {
+                datosFiltrados = [...planillaDatos];
+            } else {
+                datosFiltrados = planillaDatos.filter(item => {
+                    return Object.values(item).some(valor => 
+                        valor && valor.toString().toLowerCase().includes(textoBusqueda)
+                    );
+                });
+            }
+            
+            paginaActual = 1;
+            renderizarDatosPaginados();
+        }
+        
+        // Función para limpiar búsqueda
+        function limpiarBusquedaGlobal() {
+            document.getElementById('busquedaGlobal').value = '';
+            datosFiltrados = [...planillaDatos];
+            paginaActual = 1;
+            renderizarDatosPaginados();
+        }
+        
+        // Función para mostrar todas las filas (actualizada)
+        function mostrarTodasLasFilas() {
+            datosFiltrados = [...planillaDatos];
+            paginaActual = 1;
+            renderizarDatosPaginados();
+        }
+        
+        // Actualizar función de búsqueda para trabajar con paginación
+        function buscarEnTabla(texto) {
+            console.log('Buscando:', texto);
+            
+            const tbodyScrollable = document.querySelector('#tableScrollable tbody');
+            const filasScrollable = tbodyScrollable.querySelectorAll('tr');
+            
+            const tbodyFixed = document.querySelector('.table-fixed tbody');
+            const filasFixed = tbodyFixed.querySelectorAll('tr');
+            
+            let filasVisibles = 0;
+            
+            for (let i = 0; i < filasScrollable.length; i++) {
+                const filaScrollable = filasScrollable[i];
+                const filaFixed = filasFixed[i];
+                const textoFila = filaScrollable.textContent.toLowerCase();
+                
+                if (textoFila.includes(texto.toLowerCase())) {
+                    filaScrollable.style.display = '';
+                    filaFixed.style.display = '';
+                    filasVisibles++;
+                } else {
+                    filaScrollable.style.display = 'none';
+                    filaFixed.style.display = 'none';
+                }
+            }
+            
+            console.log(`Se encontraron ${filasVisibles} filas visibles`);
+        }
+        
+        // Inicialización cuando el DOM esté listo
+        document.addEventListener('DOMContentLoaded', function() {
+            renderizarDatosScrollable();
+        });
+        
+    </script>
+                    </td>
+                    <td class="puesto-produccion">
+                        ${getEstadoCirclePorPuesto(item, 'P6')}
+                    </td>
+                    <td class="puesto-produccion">
+                        ${getEstadoCirclePorPuesto(item, 'P7')}
+                    </td>
+                    <td class="puesto-produccion">
+                        ${getEstadoCirclePorPuesto(item, 'P8')}
+                    </td>
+                    <td class="puesto-produccion">
+                        ${getEstadoCirclePorPuesto(item, 'P9')}
+                    </td>
+                    <td class="puesto-produccion">
+                        ${getEstadoCirclePorPuesto(item, 'LAVADO')}
+                    </td>
+                    <td class="puesto-produccion">
+                        ${getEstadoCirclePorPuesto(item, 'PINTURA')}
+                    </td>
+                    <td class="puesto-produccion">
+                        ${getEstadoCirclePorPuesto(item, 'M1')}
+                    </td>
+                    <td class="puesto-produccion">
+                        ${getEstadoCirclePorPuesto(item, 'M2')}
+                    </td>
+                    <td class="puesto-produccion">
+                        ${getEstadoCirclePorPuesto(item, 'M3')}
+                    </td>
+                    <td class="puesto-produccion">
+                        ${getEstadoCirclePorPuesto(item, 'M4')}
+                    </td>
+                    <td class="puesto-produccion">
+                        ${getEstadoCirclePorPuesto(item, 'M5')}
+                    </td>
+                    <td class="entrega">${item.entregada || '-'}</td>
+                    <td class="entrega">${item.fecha_entrega || '-'}</td>
+                    <td class="entrega">${item.pedido || '-'}</td>
+                    <td class="entrega">${item.liberada_ventas || '-'}</td>
+                    <td class="entrega">${item.llantas_ok || '-'}</td>
+                    <td class="entrega">${item.cubiertas_ok || '-'}</td>
+                    <td class="entrega"><div data-observaciones>${item.observaciones_2 || '-'}</div></td>
+                    <td class="entrega">${item.proveedor_sinfin || '-'}</td>
+                    <td class="entrega">${item.dias_consignacion || '-'}</td>
+                `;
+                
+                tbody.appendChild(tr);
+            });
+        }
+        
+        // Función para generar círculos de estado por puesto específico
+        function getEstadoCirclePorPuesto(item, puesto) {
+            // Verificar si hay un estado específico para este puesto en los datos
+            const estadosPorPuesto = item.estados_por_puesto || {};
+            const estadoPuesto = estadosPorPuesto[puesto];
+            
+            if (estadoPuesto === 'TERMINADO') {
+                return `<div class="estado-circle cumplido" title="${puesto}: TERMINADO"></div>`;
+            } 
+            else if (estadoPuesto === 'EN_PROGRESO') {
+                return `<div class="estado-circle en-progreso" title="${puesto}: EN_PROGRESO"></div>`;
+            }
+            else {
+                return `<div class="estado-circle pendiente" title="${puesto}: PENDIENTE"></div>`;
+            }
+        }
+        
+            
+            // Función para seleccionar/deseleccionar todas las filas
+        function toggleAllRows() {
+            const selectAll = document.getElementById('selectAll');
+            const checkboxes = document.querySelectorAll('.row-checkbox');
+            
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = selectAll.checked;
+            });
+            
+            updateSelectAll();
+        }
+        
+        // Función para actualizar el estado del checkbox "Seleccionar todos"
+        function updateSelectAll() {
+            const selectAll = document.getElementById('selectAll');
+            // Solo considerar checkboxes de filas visibles
+            const checkboxes = document.querySelectorAll('.row-checkbox:not(:disabled)');
+            const checkedBoxes = document.querySelectorAll('.row-checkbox:checked:not(:disabled)');
+            
+            // Si todos los checkboxes visibles están marcados, marcar el "Seleccionar todos" (si existe)
+            if (selectAll) {
+                selectAll.checked = checkboxes.length > 0 && checkboxes.length === checkedBoxes.length;
+            }
+            
+            // Actualizar contador
+            updateSelectedCount();
+        }
+        
+        // Función para actualizar contador de seleccionados
+        function updateSelectedCount() {
+            // Solo considerar checkboxes de filas visibles
+            const checkedBoxes = document.querySelectorAll('.row-checkbox:checked:not(:disabled)');
+            const contador = document.getElementById('contadorSeleccionados');
+            const btnEliminar = document.getElementById('btnEliminarSeleccionados');
+            const btnEditar = document.getElementById('btnEditarSeleccionado');
+            
+            contador.textContent = checkedBoxes.length;
+            
+            // Habilitar/deshabilitar botones
+            btnEliminar.disabled = checkedBoxes.length === 0;
+            btnEditar.disabled = checkedBoxes.length !== 1; // Solo habilitar si hay exactamente 1 seleccionado
+        }
+        
+        // Función para editar fila seleccionada
+        function editarSeleccionados() {
+            console.log('DEBUG: editarSeleccionados() iniciada');
+            const checkedBoxes = document.querySelectorAll('.row-checkbox:checked:not(:disabled)');
+            console.log('DEBUG: checkboxes encontrados:', checkedBoxes.length);
+            
+            if (checkedBoxes.length !== 1) {
+                console.log('DEBUG: No hay exactamente 1 checkbox seleccionado');
+                alert('Por favor selecciona exactamente una fila para editar');
+                return;
+            }
+            
+            const id = checkedBoxes[0].value;
+            console.log('DEBUG: ID del checkbox:', id);
+            
+            // Buscar los datos de la fila seleccionada
+            const planillaDatos = {{ planilla_datos | tojson }};
+            console.log('DEBUG: planillaDatos cargados:', planillaDatos.length);
+            const filaData = planillaDatos.find(item => item.id == id);
+            console.log('DEBUG: filaData encontrado:', filaData);
+            
+            if (filaData) {
+                console.log('DEBUG: Llenando formulario...');
+                // Llenar el formulario de edición con los datos
+                document.getElementById('editarFilaId').value = filaData.id;
+                document.getElementById('editarLanzamiento').value = filaData.lanzamiento || '';
+                document.getElementById('editarNroChasis').value = filaData.nro_chasis || '';
+                document.getElementById('editarModelo').value = filaData.modelo || '';
+                document.getElementById('editarCliente').value = filaData.cliente || '';
+                document.getElementById('editarTubo').value = filaData.tubo || '';
+                document.getElementById('editarEncamisado').value = filaData.encamisado || '';
+                document.getElementById('editarTipoTubo').value = filaData.tipo_tubo || '';
+                document.getElementById('editarTamanoCubierta').value = filaData.tamano_cubierta || '';
+                document.getElementById('editarMarcaCubiertas').value = filaData.marca_cubiertas || '';
+                document.getElementById('editarColor').value = filaData.color || '';
+                document.getElementById('editarBalanza').value = filaData.balanza || '';
+                document.getElementById('editarObservaciones').value = filaData.observaciones || '';
+                document.getElementById('editarEntregada').value = filaData.entregada || '';
+                document.getElementById('editarFechaEntrega').value = filaData.fecha_entrega || '';
+                document.getElementById('editarPedido').value = filaData.pedido || '';
+                document.getElementById('editarLiberadaVentas').value = filaData.liberada_ventas || '';
+                document.getElementById('editarLlantasOk').value = filaData.llantas_ok || '';
+                document.getElementById('editarCubiertasOk').value = filaData.cubiertas_ok || '';
+                document.getElementById('editarObservaciones2').value = filaData.observaciones_2 || '';
+                document.getElementById('editarProveedorSinfin').value = filaData.proveedor_sinfin || '';
+                document.getElementById('editarDiasConsignacion').value = filaData.dias_consignacion || '';
+                
+                console.log('DEBUG: Intentando abrir modal...');
+                // Abrir el modal de edición
+                const modalElement = document.getElementById('editarFilaModal');
+                console.log('DEBUG: Modal element encontrado:', modalElement);
+                const modal = new bootstrap.Modal(modalElement);
+                console.log('DEBUG: Modal creado:', modal);
+                modal.show();
+                console.log('DEBUG: Modal.show() ejecutado');
+            } else {
+                console.log('DEBUG: No se encontraron datos para el ID:', id);
+            }
+        }
+        
+        // Función para eliminar filas seleccionadas
+        function eliminarSeleccionados() {
+            const checkboxes = document.querySelectorAll('.row-checkbox:checked:not(:disabled)');
+            const ids = Array.from(checkboxes).map(cb => cb.value);
+            
+            if (ids.length === 0) {
+                alert('Por favor selecciona al menos una fila para eliminar');
+                return;
+            }
+            
+            if (confirm(`¿Estás seguro de que deseas eliminar ${ids.length} fila(s)? Esta acción no se puede deshacer.`)) {
+                // Aquí iría la lógica para eliminar las filas
+                console.log('Eliminar IDs:', ids);
+                alert(`Se eliminarían ${ids.length} fila(s) con IDs: ${ids.join(', ')}`);
+                // Después de eliminar, recargar la página o actualizar la tabla
+            }
+        }
+        
+        // Función para guardar la edición
+        function guardarEdicion() {
+            const id = document.getElementById('editarFilaId').value;
+            
+            const datos = {
+                id: id,
+                lanzamiento: document.getElementById('editarLanzamiento').value,
+                nro_chasis: document.getElementById('editarNroChasis').value,
+                modelo: document.getElementById('editarModelo').value,
+                cliente: document.getElementById('editarCliente').value,
+                tubo: document.getElementById('editarTubo').value,
+                encamisado: document.getElementById('editarEncamisado').value,
+                tipo_tubo: document.getElementById('editarTipoTubo').value,
+                tamano_cubierta: document.getElementById('editarTamanoCubierta').value,
+                marca_cubiertas: document.getElementById('editarMarcaCubiertas').value,
+                color: document.getElementById('editarColor').value,
+                balanza: document.getElementById('editarBalanza').value,
+                observaciones: document.getElementById('editarObservaciones').value,
+                entregada: document.getElementById('editarEntregada').value,
+                fecha_entrega: document.getElementById('editarFechaEntrega').value,
+                pedido: document.getElementById('editarPedido').value,
+                liberada_ventas: document.getElementById('editarLiberadaVentas').value,
+                llantas_ok: document.getElementById('editarLlantasOk').value,
+                cubiertas_ok: document.getElementById('editarCubiertasOk').value,
+                observaciones_2: document.getElementById('editarObservaciones2').value,
+                proveedor_sinfin: document.getElementById('editarProveedorSinfin').value,
+                dias_consignacion: document.getElementById('editarDiasConsignacion').value
+            };
+            
+            console.log('Guardando edición:', datos);
+            
+            // Aquí iría la lógica para guardar en la base de datos
+            fetch('/admin/editar_chasis_asignado', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify(datos)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    mostrarMensajeExito('Fila actualizada correctamente');
+                    
+                    // Cerrar modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('editarFilaModal'));
+                    modal.hide();
+                    
+                    // Recargar página
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    mostrarMensajeError(data.error || 'Error actualizando fila');
+                }
+            })
+            .catch(error => {
+                console.error('Error guardando edición:', error);
+                mostrarMensajeError('Error de conexión al guardar los cambios');
+            });
+        }
+        
+        // Funciones para búsqueda simple global
+        function realizarBusquedaGlobal() {
+            const textoBusqueda = document.getElementById('busquedaGlobal').value.toLowerCase();
+            
+            if (!textoBusqueda) {
+                // Si está vacío, mostrar todas las filas
+                mostrarTodasLasFilas();
+                return;
+            }
+            
+            console.log('Buscando:', textoBusqueda);
+            
+            // Obtener todas las filas de AMBAS tablas
+            const tbodyScrollable = document.querySelector('#tableScrollable tbody');
+            const filasScrollable = tbodyScrollable.querySelectorAll('tr');
+            
+            const tbodyFixed = document.querySelector('.table-fixed tbody');
+            const filasFixed = tbodyFixed.querySelectorAll('tr');
+            
+            let filasVisibles = 0;
+            
+            // Filtrar tabla scrollable (derecha)
+            filasScrollable.forEach((fila, index) => {
+                const datos = planillaDatos[fila.dataset.index];
+                if (!datos) return;
+                
+                // Buscar en TODAS las columnas relevantes
+                const textoCompleto = [
+                    datos.nro_chasis || '',
+                    datos.modelo || '',
+                    datos.lanzamiento || '',
+                    datos.cliente || '',
+                    datos.tubo || '',
+                    datos.encamisado || '',
+                    datos.tipo_tubo || '',
+                    datos.tamano_cubierta || '',
+                    datos.marca_cubiertas || '',
+                    datos.color || '',
+                    datos.balanza || '',
+                    datos.observaciones || '',
+                    datos.estado || '',
+                    datos.entregada || '',
+                    datos.fecha_entrega || '',
+                    datos.pedido || '',
+                    datos.liberada_ventas || '',
+                    datos.llantas_ok || '',
+                    datos.cubiertas_ok || '',
+                    datos.observaciones_2 || '',
+                    datos.proveedor_sinfin || '',
+                    datos.dias_consignacion || ''
+                ].join(' ').toLowerCase();
+                
+                const coincide = textoCompleto.includes(textoBusqueda);
+                
+                // Mostrar u ocultar fila según coincidencia
+                if (coincide) {
+                    fila.style.display = '';
+                    filasVisibles++;
+                } else {
+                    fila.style.display = 'none';
+                }
+                
+                // Sincronizar con tabla fija (izquierda)
+                if (filasFixed[index]) {
+                    const checkbox = filasFixed[index].querySelector('.row-checkbox');
+                    if (coincide) {
+                        filasFixed[index].style.display = '';
+                        if (checkbox) checkbox.disabled = false; // Habilitar checkbox
+                    } else {
+                        filasFixed[index].style.display = 'none';
+                        if (checkbox) {
+                            checkbox.disabled = true; // Deshabilitar checkbox
+                            checkbox.checked = false; // Desmarcar checkbox
+                        }
+                    }
+                }
+            });
+            
+            // Mostrar mensaje de resultados
+            mostrarResultadosBusqueda(filasVisibles, filasScrollable.length);
+        }
+        
+        function limpiarBusquedaGlobal() {
+            document.getElementById('busquedaGlobal').value = '';
+            mostrarTodasLasFilas();
+            ocultarResultadosBusqueda();
+        }
+        
+        function mostrarTodasLasFilas() {
+            // Mostrar todas las filas de la tabla scrollable
+            const tbodyScrollable = document.querySelector('#tableScrollable tbody');
+            const filasScrollable = tbodyScrollable.querySelectorAll('tr');
+            filasScrollable.forEach(fila => {
+                fila.style.display = '';
+            });
+            
+            // Mostrar todas las filas de la tabla fija y habilitar checkboxes
+            const tbodyFixed = document.querySelector('.table-fixed tbody');
+            const filasFixed = tbodyFixed.querySelectorAll('tr');
+            filasFixed.forEach(fila => {
+                fila.style.display = '';
+                const checkbox = fila.querySelector('.row-checkbox');
+                if (checkbox) {
+                    checkbox.disabled = false; // Habilitar checkbox
+                }
+            });
+        }
+        
+        // Funciones para controlar visibilidad de columnas
+        function toggleCaracteristicas() {
+            const columnas = document.querySelectorAll('.caracteristica');
+            const boton = document.getElementById('toggleCaracteristicas');
+            const icon = boton.querySelector('i');
+            
+            const isVisible = columnas[0].style.display !== 'none';
+            
+            columnas.forEach(col => {
+                col.style.display = isVisible ? 'none' : '';
+            });
+            
+            if (isVisible) {
+                boton.innerHTML = '<i class="fas fa-list me-2"></i>Ver Características';
+                boton.className = 'btn btn-outline-primary btn-sm';
+            } else {
+                boton.innerHTML = '<i class="fas fa-list me-2"></i>Ocultar Características';
+                boton.className = 'btn btn-primary btn-sm';
+            }
+        }
+        
+        function toggleAvances() {
+            const columnas = document.querySelectorAll('.puesto-produccion');
+            const boton = document.getElementById('toggleAvances');
+            const icon = boton.querySelector('i');
+            
+            const isVisible = columnas[0].style.display !== 'none';
+            
+            columnas.forEach(col => {
+                col.style.display = isVisible ? 'none' : '';
+            });
+            
+            if (isVisible) {
+                boton.innerHTML = '<i class="fas fa-tasks me-2"></i>Ver Avances';
+                boton.className = 'btn btn-outline-success btn-sm';
+            } else {
+                boton.innerHTML = '<i class="fas fa-tasks me-2"></i>Ocultar Avances';
+                boton.className = 'btn btn-success btn-sm';
+            }
+        }
+        
+        function toggleEntrega() {
+            const columnas = document.querySelectorAll('.entrega');
+            const boton = document.getElementById('toggleEntrega');
+            const icon = boton.querySelector('i');
+            
+            const isVisible = columnas[0].style.display !== 'none';
+            
+            columnas.forEach(col => {
+                col.style.display = isVisible ? 'none' : '';
+            });
+            
+            if (isVisible) {
+                boton.innerHTML = '<i class="fas fa-truck me-2"></i>Ver Entrega';
+                boton.className = 'btn btn-outline-warning btn-sm';
+            } else {
+                boton.innerHTML = '<i class="fas fa-truck me-2"></i>Ocultar Entrega';
+                boton.className = 'btn btn-warning btn-sm';
+            }
+        }
+        
+        // Función para importar Excel
+        function importarExcel() {
+            console.log('DEBUG: Función importarExcel() iniciada');
+            const form = document.getElementById('formImportarExcel');
+            const formData = new FormData(form);
+            const implemento = '{{ implemento }}';
+            
+            console.log('DEBUG: Formulario encontrado:', form);
+            console.log('DEBUG: Implemento:', implemento);
+            console.log('DEBUG: FormData creada');
+            
+            // Deshabilitar botón durante la importación
+            const btnImportar = document.getElementById('btnImportar');
+            btnImportar.disabled = true;
+            btnImportar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Importando...';
+            
+            // Ocultar resultados anteriores
+            document.getElementById('resultadoImportacion').classList.add('d-none');
+            document.getElementById('listaDuplicados').classList.add('d-none');
+            
+            console.log('DEBUG: Enviando petición fetch...');
+            
+            fetch(`/admin/importar_excel/${implemento}`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('DEBUG: Respuesta del servidor:', data);
+                const resultadoDiv = document.getElementById('resultadoImportacion');
+                const mensajeSpan = document.getElementById('mensajeResultado');
+                const alertDiv = resultadoDiv.querySelector('.alert');
+                
+                resultadoDiv.classList.remove('d-none');
+                
+                // Ocultar la sección de requisitos al mostrar resultados
+                document.getElementById('requisitosExcel').classList.add('d-none');
+                
+                // Cambiar el botón Importar Datos por Salir
+                const btnImportar = document.getElementById('btnImportar');
+                btnImportar.innerHTML = '<i class="fas fa-sign-out-alt me-2"></i>Salir';
+                btnImportar.onclick = function() {
+                    location.reload(); // Recargar la página al salir
+                };
+                btnImportar.className = 'btn btn-success'; // Cambiar color a verde
+                
+                if (data.success) {
+                    // Éxito
+                    if (data.warning) {
+                        alertDiv.className = 'alert alert-warning';
+                    } else {
+                        alertDiv.className = 'alert alert-success';
+                    }
+                    mensajeSpan.innerHTML = `<i class="fas fa-check-circle me-2"></i>${data.mensaje}`;
+                    console.log('DEBUG: Importación exitosa');
+                    
+                    // Mostrar duplicados si existen
+                    if (data.duplicados && data.duplicados.length > 0) {
+                        const listaDiv = document.getElementById('listaDuplicados');
+                        const tbody = document.getElementById('tbodyDuplicados');
+                        
+                        tbody.innerHTML = '';
+                        data.duplicados.forEach(dup => {
+                            tbody.innerHTML += `
+                                <tr>
+                                    <td>${dup.fila}</td>
+                                    <td>${dup.nro_chasis}</td>
+                                    <td>${dup.motivo}</td>
+                                </tr>
+                            `;
+                        });
+                        
+                        listaDiv.classList.remove('d-none');
+                    }
+                    
+                    // Recargar página automáticamente solo si no hay duplicados
+                    if (!data.duplicados || data.duplicados.length === 0) {
+                        setTimeout(() => {
+                            location.reload();
+                        }, 2000);
+                    }
+                    // Si hay duplicados, no recargar automáticamente para que el usuario pueda ver los detalles
+                } else {
+                    // Error
+                    alertDiv.className = 'alert alert-danger';
+                    mensajeSpan.innerHTML = `<i class="fas fa-exclamation-circle me-2"></i>${data.error}`;
+                    console.log('DEBUG: Error en importación:', data.error);
+                    
+                    // Mostrar duplicados si existen
+                    if (data.duplicados && data.duplicados.length > 0) {
+                        const listaDiv = document.getElementById('listaDuplicados');
+                        const tbody = document.getElementById('tbodyDuplicados');
+                        
+                        tbody.innerHTML = '';
+                        data.duplicados.forEach(dup => {
+                            tbody.innerHTML += `
+                                <tr>
+                                    <td>${dup.fila}</td>
+                                    <td>${dup.nro_chasis}</td>
+                                    <td>${dup.motivo}</td>
+                                </tr>
+                            `;
+                        });
+                        
+                        listaDiv.classList.remove('d-none');
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('DEBUG: Error en la petición:', error);
+                const resultadoDiv = document.getElementById('resultadoImportacion');
+                const mensajeSpan = document.getElementById('mensajeResultado');
+                const alertDiv = resultadoDiv.querySelector('.alert');
+                
+                resultadoDiv.classList.remove('d-none');
+                alertDiv.className = 'alert alert-danger';
+                mensajeSpan.innerHTML = `<i class="fas fa-exclamation-circle me-2"></i>Error de conexión: ${error.message}`;
+            })
+            .finally(() => {
+                // Rehabilitar botón
+                btnImportar.disabled = false;
+                btnImportar.innerHTML = '<i class="fas fa-file-import me-2"></i>Importar Datos';
+            });
+        }
+        
+        // Función de prueba para verificar si JavaScript está funcionando
+        function testJavaScript() {
+            console.log('DEBUG: Botón de prueba presionado');
+            alert('JavaScript está funcionando correctamente');
+        }
+        
+        // Función para migrar estados de puestos
+        function migrarEstadosPuestos() {
+            console.log('DEBUG: Iniciando migración de estados de puestos');
+            
+            if (!confirm('¿Está seguro de migrar los estados de puestos? Esto unificará los datos de producción en una nueva tabla.')) {
+                console.log('DEBUG: Usuario canceló la migración');
+                return;
+            }
+            
+            console.log('DEBUG: Enviando solicitud de migración...');
+            
+            fetch('/admin/migrar_estados_puestos', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+                }
+            })
+            .then(response => {
+                console.log('DEBUG: Respuesta de migración:', response);
+                return response.json();
+            })
+            .then(data => {
+                console.log('DEBUG: Datos de migración:', data);
+                
+                if (data.success) {
+                    alert(`${data.mensaje}\n\nChasis procesados: ${data.chasis_procesados}\nEstados migrados: ${data.total_migrados}`);
+                    console.log('DEBUG: Migración exitosa');
+                } else {
+                    alert(`Error en migración: ${data.error}`);
+                    console.log('DEBUG: Error en migración:', data.error);
+                }
+            })
+            .catch(error => {
+                console.error('DEBUG: Error en la petición de migración:', error);
+                alert('Error de conexión al migrar los estados.');
+            });
+        }
+        
+        // Función para autocompletar datos al ingresar número de chasis
+        function autocompletarPorChasis() {
+            const nroChasis = document.getElementById('nro_chasis_manual').value.trim();
+            
+            if (!nroChasis) {
+                // Limpiar campos si no hay chasis
+                limpiarFormulario();
+                return;
+            }
+            
+            console.log('DEBUG: Buscando chasis:', nroChasis);
+            
+            // Buscar en plan_produccion primero
+            fetch(`/admin/buscar_chasis/${nroChasis}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('DEBUG: Datos encontrados:', data);
+                    
+                    if (data.success && data.datos) {
+                        const chasis = data.datos;
+                        
+                        // Autocompletar MODELO (solo lectura, viene de plan_produccion)
+                        document.getElementById('modelo_manual').value = chasis.modelo || '';
+                        
+                        // Autocompletar campos de chasis_asignado si existen
+                        document.getElementById('lanzamiento_manual').value = chasis.lanzamiento || '';
+                        document.getElementById('cliente_manual').value = chasis.cliente || '';
+                        document.getElementById('tubo_manual').value = chasis.tubo || '';
+                        document.getElementById('encamisado_manual').value = chasis.encamisado || '';
+                        document.getElementById('tipo_tubo_manual').value = chasis.tipo_tubo || '';
+                        document.getElementById('tamano_cubierta_manual').value = chasis.tamano_cubierta || '';
+                        document.getElementById('marca_cubiertas_manual').value = chasis.marca_cubiertas || '';
+                        document.getElementById('color_manual').value = chasis.color || '';
+                        document.getElementById('balanza_manual').value = chasis.balanza || '';
+                        document.getElementById('observaciones_manual').value = chasis.observaciones || '';
+                        document.getElementById('entregada_manual').value = chasis.entregada || '';
+                        document.getElementById('fecha_entrega_manual').value = chasis.fecha_entrega || '';
+                        
+                        // Mostrar mensaje de éxito con todos los campos autocompletados
+                        mostrarMensajeExito('Datos autocompletados correctamente. MODELO: ' + (chasis.modelo || 'No encontrado') + ', LANZAMIENTO: ' + (chasis.lanzamiento || 'No encontrado') + ', CLIENTE: ' + (chasis.cliente || 'No encontrado'));
+                    } else {
+                        // Si no existe, limpiar formulario excepto el chasis
+                        limpiarFormulario();
+                        document.getElementById('nro_chasis_manual').value = nroChasis;
+                        mostrarMensajeInfo('Chasis no encontrado. Puede ingresar datos manualmente.');
+                    }
+                })
+                .catch(error => {
+                    console.error('DEBUG: Error buscando chasis:', error);
+                    mostrarMensajeError('Error buscando datos del chasis');
+                });
+        }
+        
+        // Función para limpiar formulario
+        function limpiarFormulario() {
+            document.getElementById('modelo_manual').value = '';
+            document.getElementById('lanzamiento_manual').value = '';
+            document.getElementById('cliente_manual').value = '';
+            document.getElementById('tubo_manual').value = '';
+            document.getElementById('encamisado_manual').value = '';
+            document.getElementById('tipo_tubo_manual').value = '';
+            document.getElementById('tamano_cubierta_manual').value = '';
+            document.getElementById('marca_cubiertas_manual').value = '';
+            document.getElementById('color_manual').value = '';
+            document.getElementById('balanza_manual').value = '';
+            document.getElementById('observaciones_manual').value = '';
+            document.getElementById('entregada_manual').value = '';
+            document.getElementById('fecha_entrega_manual').value = '';
+        }
+        
+        // Función para agregar fila manualmente
+        function agregarFilaManual() {
+            const nroChasis = document.getElementById('nro_chasis_manual').value.trim();
+            
+            if (!nroChasis) {
+                mostrarMensajeError('El número de chasis es obligatorio');
+                return;
+            }
+            
+            console.log('DEBUG: Agregando fila manual para chasis:', nroChasis);
+            
+            const datos = {
+                nro_chasis: nroChasis,
+                lanzamiento: document.getElementById('lanzamiento_manual').value,
+                cliente: document.getElementById('cliente_manual').value,
+                tubo: document.getElementById('tubo_manual').value,
+                encamisado: document.getElementById('encamisado_manual').value,
+                tipo_tubo: document.getElementById('tipo_tubo_manual').value,
+                tamano_cubierta: document.getElementById('tamano_cubierta_manual').value,
+                marca_cubiertas: document.getElementById('marca_cubiertas_manual').value,
+                color: document.getElementById('color_manual').value,
+                balanza: document.getElementById('balanza_manual').value,
+                observaciones: document.getElementById('observaciones_manual').value,
+                entregada: document.getElementById('entregada_manual').value,
+                fecha_entrega: document.getElementById('fecha_entrega_manual').value,
+                implemento: '{{ implemento }}'
+            };
+            
+            fetch('/admin/agregar_fila_manual', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify(datos)
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('DEBUG: Respuesta agregar fila:', data);
+                
+                if (data.success) {
+                    mostrarMensajeExito(data.mensaje);
+                    
+                    // Cerrar modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('agregarFilaModal'));
+                    modal.hide();
+                    
+                    // Recargar página después de un corto delay
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    mostrarMensajeError(data.error || 'Error agregando fila');
+                }
+            })
+            .catch(error => {
+                console.error('DEBUG: Error agregando fila:', error);
+                mostrarMensajeError('Error de conexión al agregar fila');
+            });
+        }
+        
+        // Funciones para mostrar mensajes
+        function mostrarMensajeExito(mensaje) {
+            // Crear o actualizar alerta de éxito
+            let alertDiv = document.getElementById('alertaExito');
+            if (!alertDiv) {
+                alertDiv = document.createElement('div');
+                alertDiv.id = 'alertaExito';
+                alertDiv.className = 'alert alert-success alert-dismissible fade show position-fixed';
+                alertDiv.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+                alertDiv.innerHTML = `
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    <i class="fas fa-check-circle me-2"></i>${mensaje}
+                `;
+                document.body.appendChild(alertDiv);
+            } else {
+                alertDiv.querySelector('button').nextSibling.textContent = mensaje;
+            }
+            
+            // Auto-ocultar después de 3 segundos
+            setTimeout(() => {
+                if (alertDiv && alertDiv.parentNode) {
+                    alertDiv.parentNode.removeChild(alertDiv);
+                }
+            }, 3000);
+        }
+        
+        function mostrarMensajeError(mensaje) {
+            let alertDiv = document.getElementById('alertaError');
+            if (!alertDiv) {
+                alertDiv = document.createElement('div');
+                alertDiv.id = 'alertaError';
+                alertDiv.className = 'alert alert-danger alert-dismissible fade show position-fixed';
+                alertDiv.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+                alertDiv.innerHTML = `
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    <i class="fas fa-exclamation-circle me-2"></i>${mensaje}
+                `;
+                document.body.appendChild(alertDiv);
+            } else {
+                alertDiv.querySelector('button').nextSibling.textContent = mensaje;
+            }
+            
+            setTimeout(() => {
+                if (alertDiv && alertDiv.parentNode) {
+                    alertDiv.parentNode.removeChild(alertDiv);
+                }
+            }, 5000);
+        }
+        
+        function mostrarMensajeInfo(mensaje) {
+            let alertDiv = document.getElementById('alertaInfo');
+            if (!alertDiv) {
+                alertDiv = document.createElement('div');
+                alertDiv.id = 'alertaInfo';
+                alertDiv.className = 'alert alert-info alert-dismissible fade show position-fixed';
+                alertDiv.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+                alertDiv.innerHTML = `
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    <i class="fas fa-info-circle me-2"></i>${mensaje}
+                `;
+                document.body.appendChild(alertDiv);
+            } else {
+                alertDiv.querySelector('button').nextSibling.textContent = mensaje;
+            }
+            
+            setTimeout(() => {
+                if (alertDiv && alertDiv.parentNode) {
+                    alertDiv.parentNode.removeChild(alertDiv);
+                }
+            }, 4000);
+        }
+    </script>
+
+    <!-- Modal Importar Excel -->
+    <div class="modal fade" id="importarExcelModal" tabindex="-1" aria-labelledby="importarExcelModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="importarExcelModalLabel">
+                        <i class="fas fa-file-excel me-2"></i>
+                        Importar Datos desde Excel
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formImportarExcel" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
+                        
+                        <div class="mb-3">
+                            <label for="fileExcel" class="form-label">
+                                <i class="fas fa-upload me-2"></i>
+                                Seleccionar archivo Excel
+                            </label>
+                            <input type="file" class="form-control form-control-lg" id="fileExcel" name="file" 
+                                   accept=".xlsx,.xls" required>
+                            <div class="form-text">
+                                Formatos permitidos: .xlsx, .xls
+                            </div>
+                        </div>
+                        
+                        <div id="requisitosExcel" class="alert alert-info">
+                            <h6 class="alert-heading">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Requisitos del archivo Excel:
+                            </h6>
+                            <ul class="mb-0">
+                                <li><strong>Columnas requeridas (en este orden exacto):</strong></li>
+                                <li style="margin-left: 20px;">1. <strong>Nº CHASIS</strong> (obligatorio)</li>
+                                <li style="margin-left: 20px;">2. <strong>LANZAMIENTO</strong></li>
+                                <li style="margin-left: 20px;">3. <strong>CLIENTE</strong></li>
+                                <li style="margin-left: 20px;">4. <strong>TUBO</strong></li>
+                                <li style="margin-left: 20px;">5. <strong>ENCAMISADO</strong></li>
+                                <li style="margin-left: 20px;">6. <strong>TIPO TUBO</strong></li>
+                                <li style="margin-left: 20px;">7. <strong>TAMAÑO DE CUBIERTA</strong></li>
+                                <li style="margin-left: 20px;">8. <strong>MARCA DE LAS CUBIERTAS</strong></li>
+                                <li style="margin-left: 20px;">9. <strong>COLOR</strong></li>
+                                <li style="margin-left: 20px;">10. <strong>BALANZA</strong></li>
+                                <li style="margin-left: 20px;">11. <strong>OBSERVACIONES</strong></li>
+                                <li style="margin-left: 20px;">12. <strong>Entregada</strong></li>
+                                <li style="margin-left: 20px;">13. <strong>Fecha de Entrega</strong></li>
+                                <li style="margin-left: 20px;">14. <strong>Pedido</strong></li>
+                                <li style="margin-left: 20px;">15. <strong>Liberada para VENTAS</strong></li>
+                                <li style="margin-left: 20px;">16. <strong>Llantas OK</strong></li>
+                                <li style="margin-left: 20px;">17. <strong>Cubiertas OK</strong></li>
+                                <li style="margin-left: 20px;">18. <strong>OBSERVACIÓN 2</strong></li>
+                                <li style="margin-left: 20px;">19. <strong>PROVEEDOR DE SIN FIN</strong></li>
+                                <li style="margin-left: 20px;">20. <strong>DIAS EN CONSIGNACION DESDE SU ENTREGA</strong></li>
+                                <li>No debe haber chasis duplicados con los existentes en ChasisAsignado</li>
+                                <li>Las 5 primeras columnas son obligatorias y deben tener datos</li>
+                                <li>Formatos permitidos: .xlsx, .xls</li>
+                            </ul>
+                        </div>
+                        
+                        <div id="resultadoImportacion" class="d-none">
+                            <div class="alert" role="alert">
+                                <span id="mensajeResultado"></span>
+                            </div>
+                        </div>
+                        
+                        <div id="listaDuplicados" class="d-none">
+                            <h6 class="text-danger">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Chasis duplicados encontrados:
+                            </h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered">
+                                    <thead class="table-danger">
+                                        <tr>
+                                            <th>Fila</th>
+                                            <th>Nº Chasis</th>
+                                            <th>Motivo</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbodyDuplicados">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary" id="btnImportar" onclick="importarExcel()">
+                        <i class="fas fa-file-import me-2"></i>
+                        Importar Datos
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Agregar Fila Manual -->
+    <div class="modal fade" id="agregarFilaModal" tabindex="-1" aria-labelledby="agregarFilaModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="agregarFilaModalLabel">
+                        <i class="fas fa-plus me-2"></i>
+                        Agregar Nueva Fila Manualmente
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formAgregarFila">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="nro_chasis_manual" class="form-label">
+                                        <i class="fas fa-hashtag me-1"></i>N° CHASIS *
+                                    </label>
+                                    <input type="text" class="form-control" id="nro_chasis_manual" required 
+                                           placeholder="Ingrese el número de chasis y presione Enter para autocompletar"
+                                           onblur="autocompletarPorChasis()"
+                                           onkeypress="if(event.key === 'Enter') { event.preventDefault(); autocompletarPorChasis(); }">
+                                    <small class="text-muted">Al ingresar el chasis y presionar Enter, los datos se autocompletarán si existen</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="modelo_manual" class="form-label">
+                                        <i class="fas fa-cogs me-1"></i>MODELO (autocompletado)
+                                    </label>
+                                    <input type="text" class="form-control" id="modelo_manual" readonly 
+                                           placeholder="Se autocompletará al ingresar chasis"
+                                           style="background-color: #f8f9fa; cursor: not-allowed;">
+                                    <small class="text-muted">Modelo autocompletado desde plan_producción</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="lanzamiento_manual" class="form-label">
+                                        <i class="fas fa-calendar me-1"></i>LANZAMIENTO
+                                    </label>
+                                    <input type="text" class="form-control" id="lanzamiento_manual" 
+                                           placeholder="Texto libre de lanzamiento"
+                                           value="">
+                                    <small class="text-muted">Campo de texto libre</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="cliente_manual" class="form-label">
+                                        <i class="fas fa-user me-1"></i>CLIENTE
+                                    </label>
+                                    <input type="text" class="form-control" id="cliente_manual">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="tubo_manual" class="form-label">
+                                        <i class="fas fa-cog me-1"></i>TUBO
+                                    </label>
+                                    <input type="text" class="form-control" id="tubo_manual">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="encamisado_manual" class="form-label">
+                                        <i class="fas fa-layer-group me-1"></i>ENCAMISADO
+                                    </label>
+                                    <input type="text" class="form-control" id="encamisado_manual">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="tipo_tubo_manual" class="form-label">
+                                        <i class="fas fa-shapes me-1"></i>TIPO TUBO
+                                    </label>
+                                    <input type="text" class="form-control" id="tipo_tubo_manual">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="tamano_cubierta_manual" class="form-label">
+                                        <i class="fas fa-circle me-1"></i>TAMAÑO CUBIERTA
+                                    </label>
+                                    <input type="text" class="form-control" id="tamano_cubierta_manual">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="marca_cubiertas_manual" class="form-label">
+                                        <i class="fas fa-tag me-1"></i>MARCA CUBIERTAS
+                                    </label>
+                                    <input type="text" class="form-control" id="marca_cubiertas_manual">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="color_manual" class="form-label">
+                                        <i class="fas fa-palette me-1"></i>COLOR
+                                    </label>
+                                    <input type="text" class="form-control" id="color_manual">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="balanza_manual" class="form-label">
+                                        <i class="fas fa-weight me-1"></i>BALANZA
+                                    </label>
+                                    <input type="text" class="form-control" id="balanza_manual">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="observaciones_manual" class="form-label">
+                                <i class="fas fa-comment me-1"></i>OBSERVACIONES
+                            </label>
+                            <textarea class="form-control" id="observaciones_manual" rows="2"></textarea>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="entregada_manual" class="form-label">
+                                        <i class="fas fa-check-circle me-1"></i>ENTREGADA
+                                    </label>
+                                    <select class="form-control" id="entregada_manual">
+                                        <option value="NO" selected>NO</option>
+                                        <option value="SI">SI</option>
+                                        <option value="">Seleccionar...</option>
+                                    </select>
+                                    <small class="text-muted">Por defecto: NO</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="fecha_entrega_manual" class="form-label">
+                                        <i class="fas fa-calendar-check me-1"></i>FECHA ENTREGA
+                                    </label>
+                                    <input type="date" class="form-control" id="fecha_entrega_manual">
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn btn-success" onclick="agregarFilaManual()">
+                        <i class="fas fa-save me-2"></i>
+                        Guardar Fila
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Editar Fila -->
+    <div class="modal fade" id="editarFilaModal" tabindex="-1" aria-labelledby="editarFilaModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-white">
+                    <h5 class="modal-title" id="editarFilaModalLabel">
+                        <i class="fas fa-edit me-2"></i>
+                        Editar Fila Seleccionada
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formEditarFila">
+                        <input type="hidden" id="editarFilaId">
+                        
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="editarLanzamiento" class="form-label">LANZAMIENTO</label>
+                                    <input type="text" class="form-control" id="editarLanzamiento" readonly style="background-color: #f8f9fa; cursor: not-allowed;">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="editarNroChasis" class="form-label">N° CHASIS</label>
+                                    <input type="text" class="form-control" id="editarNroChasis" readonly style="background-color: #f8f9fa; cursor: not-allowed;">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="editarModelo" class="form-label">MODELO</label>
+                                    <input type="text" class="form-control" id="editarModelo" readonly style="background-color: #f8f9fa; cursor: not-allowed;">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="editarCliente" class="form-label">CLIENTE</label>
+                                    <input type="text" class="form-control" id="editarCliente">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="editarTubo" class="form-label">TUBO</label>
+                                    <input type="text" class="form-control" id="editarTubo">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="editarEncamisado" class="form-label">ENCAMISADO</label>
+                                    <input type="text" class="form-control" id="editarEncamisado">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="editarTipoTubo" class="form-label">TIPO TUBO</label>
+                                    <input type="text" class="form-control" id="editarTipoTubo">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="editarTamanoCubierta" class="form-label">TAMAÑO CUBIERTA</label>
+                                    <input type="text" class="form-control" id="editarTamanoCubierta">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="editarMarcaCubiertas" class="form-label">MARCA CUBIERTAS</label>
+                                    <input type="text" class="form-control" id="editarMarcaCubiertas">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="editarColor" class="form-label">COLOR</label>
+                                    <input type="text" class="form-control" id="editarColor">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="editarBalanza" class="form-label">BALANZA</label>
+                                    <input type="text" class="form-control" id="editarBalanza">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="editarEntregada" class="form-label">ENTREGADA</label>
+                                    <select class="form-control" id="editarEntregada">
+                                        <option value="NO">NO</option>
+                                        <option value="SI">SI</option>
+                                        <option value="">Seleccionar...</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="editarObservaciones" class="form-label">OBSERVACIONES</label>
+                                    <textarea class="form-control" id="editarObservaciones" rows="2"></textarea>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="editarFechaEntrega" class="form-label">FECHA ENTREGA</label>
+                                    <input type="date" class="form-control" id="editarFechaEntrega">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="editarPedido" class="form-label">PEDIDO</label>
+                                    <input type="text" class="form-control" id="editarPedido">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="editarLiberadaVentas" class="form-label">LIBERADA VENTAS</label>
+                                    <input type="text" class="form-control" id="editarLiberadaVentas">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="editarLlantasOk" class="form-label">LLANTAS OK</label>
+                                    <input type="text" class="form-control" id="editarLlantasOk">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="editarCubiertasOk" class="form-label">CUBIERTAS OK</label>
+                                    <input type="text" class="form-control" id="editarCubiertasOk">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="editarObservaciones2" class="form-label">OBSERVACIÓN 2</label>
+                                    <input type="text" class="form-control" id="editarObservaciones2">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="editarProveedorSinfin" class="form-label">PROVEEDOR DE SIN FIN</label>
+                                    <input type="text" class="form-control" id="editarProveedorSinfin">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="editarDiasConsignacion" class="form-label">DIAS EN CONSIGNACIÓN</label>
+                                    <input type="text" class="form-control" id="editarDiasConsignacion">
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn btn-warning" onclick="guardarEdicion()">
+                        <i class="fas fa-save me-2"></i>
+                        Guardar Cambios
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

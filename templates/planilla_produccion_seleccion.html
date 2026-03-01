@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planilla de Producción - Ascanelli</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
+        
+        .header-production {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            padding: 30px 0;
+            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+        }
+        
+        .implemento-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin: 20px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            border: none;
+            position: relative;
+            overflow: hidden;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+        
+        .implemento-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        .implemento-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, #007bff, #0056b3);
+        }
+        
+        .implemento-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            display: block;
+        }
+        
+        .implemento-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: #007bff;
+        }
+        
+        .implemento-description {
+            color: #6c757d;
+            margin-bottom: 20px;
+        }
+        
+        .implemento-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #007bff;
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+        
+        .breadcrumb-custom {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 10px 20px;
+            margin-bottom: 30px;
+        }
+        
+        .breadcrumb-custom a {
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+        }
+        
+        .breadcrumb-custom a:hover {
+            color: white;
+        }
+        
+        .breadcrumb-custom .active {
+            color: white;
+            font-weight: 600;
+        }
+        
+        .action-buttons {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 1000;
+        }
+        
+        .btn-float {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-float:hover {
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header-production">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h2 mb-2">
+                        <i class="fas fa-clipboard-list me-3"></i>
+                        Planilla de Producción
+                    </h1>
+                    <p class="mb-0 opacity-75">Gestión de Chasis y Seguimiento de Producción</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('admin_opciones_produccion') }}" class="btn btn-outline-light btn-lg">
+                        <i class="fas fa-arrow-left me-2"></i>
+                        Volver a Producción
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Breadcrumb -->
+            <nav aria-label="breadcrumb" class="breadcrumb-custom">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('seleccion_admin') }}">
+                            <i class="fas fa-home me-1"></i> Panel Admin
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('admin_opciones_produccion') }}">
+                            <i class="fas fa-industry me-1"></i> Producción
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item active" aria-current="page">
+                        <i class="fas fa-clipboard-list me-1"></i> Planilla de Producción
+                    </li>
+                </ol>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Contenido Principal -->
+    <div class="container my-5">
+        <div class="text-center mb-5">
+            <h2 class="h3 mb-3">Seleccionar Implemento</h2>
+            <p class="text-muted">Elige el implemento para ver la planilla de producción y gestión de chasis</p>
+        </div>
+        
+        <div class="row">
+            <!-- TOLVA -->
+            <div class="col-lg-4 col-md-6 mb-4">
+                <a href="{{ url_for('planilla_produccion', implemento='TOLVA') }}" class="implemento-card">
+                    <div class="text-center">
+                        <span class="implemento-icon text-primary">🚛</span>
+                        <h3 class="implemento-title">TOLVA</h3>
+                        <p class="implemento-description">Gestión de tolvas sembradoras y sus características técnicas</p>
+                        
+                        <div class="implemento-stats">
+                            <div class="stat-item">
+                                <div class="stat-number" id="tolva-total">0</div>
+                                <div class="stat-label">Total Chasis</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number" id="tolva-activos">0</div>
+                                <div class="stat-label">Activos</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number" id="tolva-clientes">0</div>
+                                <div class="stat-label">Con Cliente</div>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            
+            <!-- MIXER -->
+            <div class="col-lg-4 col-md-6 mb-4">
+                <a href="{{ url_for('planilla_produccion', implemento='MIXER') }}" class="implemento-card">
+                    <div class="text-center">
+                        <span class="implemento-icon text-success">🥤</span>
+                        <h3 class="implemento-title">MIXER</h3>
+                        <p class="implemento-description">Mezcladoras M1600, M2000, M2600 y gestión de componentes</p>
+                        
+                        <div class="implemento-stats">
+                            <div class="stat-item">
+                                <div class="stat-number" id="mixer-total">0</div>
+                                <div class="stat-label">Total Chasis</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number" id="mixer-activos">0</div>
+                                <div class="stat-label">Activos</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number" id="mixer-clientes">0</div>
+                                <div class="stat-label">Con Cliente</div>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            
+            <!-- EMBOLSADORA -->
+            <div class="col-lg-4 col-md-6 mb-4">
+                <a href="{{ url_for('planilla_produccion', implemento='EMBOLSADORA') }}" class="implemento-card">
+                    <div class="text-center">
+                        <span class="implemento-icon text-warning">📦</span>
+                        <h3 class="implemento-title">EMBOLSADORA</h3>
+                        <p class="implemento-description">Sistema de embolsado y control de producción de bolsas</p>
+                        
+                        <div class="implemento-stats">
+                            <div class="stat-item">
+                                <div class="stat-number" id="embolsadora-total">0</div>
+                                <div class="stat-label">Total Chasis</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number" id="embolsadora-activos">0</div>
+                                <div class="stat-label">Activos</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number" id="embolsadora-clientes">0</div>
+                                <div class="stat-label">Con Cliente</div>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            
+            <!-- ATT -->
+            <div class="col-lg-4 col-md-6 mb-4">
+                <a href="{{ url_for('planilla_produccion', implemento='ATT') }}" class="implemento-card">
+                    <div class="text-center">
+                        <span class="implemento-icon text-danger">⚙️</span>
+                        <h3 class="implemento-title">ATT</h3>
+                        <p class="implemento-description">Acoplador de tractores y sistemas de transmisión</p>
+                        
+                        <div class="implemento-stats">
+                            <div class="stat-item">
+                                <div class="stat-number" id="att-total">0</div>
+                                <div class="stat-label">Total Chasis</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number" id="att-activos">0</div>
+                                <div class="stat-label">Activos</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number" id="att-clientes">0</div>
+                                <div class="stat-label">Con Cliente</div>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            
+            <!-- SEMBRADORA -->
+            <div class="col-lg-4 col-md-6 mb-4">
+                <a href="{{ url_for('planilla_produccion', implemento='SEMBRADORA') }}" class="implemento-card">
+                    <div class="text-center">
+                        <span class="implemento-icon text-success">🌾</span>
+                        <h3 class="implemento-title">SEMBRADORA</h3>
+                        <p class="implemento-description">Sembradoras de precisión y sistemas de siembra directa</p>
+                        
+                        <div class="implemento-stats">
+                            <div class="stat-item">
+                                <div class="stat-number" id="sembradora-total">0</div>
+                                <div class="stat-label">Total Chasis</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number" id="sembradora-activos">0</div>
+                                <div class="stat-label">Activos</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number" id="sembradora-clientes">0</div>
+                                <div class="stat-label">Con Cliente</div>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botones Flotantes -->
+    <div class="action-buttons">
+        <button class="btn btn-primary btn-float" onclick="alert('Función de gestión de clientes - En desarrollo')" title="Gestión de Clientes">
+            <i class="fas fa-users"></i>
+        </button>
+        <button class="btn btn-success btn-float" onclick="alert('Función de configuración de características - En desarrollo')" title="Configurar Características">
+            <i class="fas fa-cogs"></i>
+        </button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Cargar estadísticas de implementos
+        document.addEventListener('DOMContentLoaded', function() {
+            cargarEstadisticasImplementos();
+        });
+        
+        function cargarEstadisticasImplementos() {
+            const implementos = ['TOLVA', 'MIXER', 'EMBOLSADORA', 'ATT', 'SEMBRADORA'];
+            
+            implementos.forEach(implemento => {
+                // Simulación de datos - reemplazar con llamada AJAX real
+                const stats = {
+                    total: Math.floor(Math.random() * 50) + 10,
+                    activos: Math.floor(Math.random() * 30) + 5,
+                    clientes: Math.floor(Math.random() * 20) + 3
+                };
+                
+                // Actualizar contadores
+                const implementoLower = implemento.toLowerCase();
+                document.getElementById(`${implementoLower}-total`).textContent = stats.total;
+                document.getElementById(`${implementoLower}-activos`).textContent = stats.activos;
+                document.getElementById(`${implementoLower}-clientes`).textContent = stats.clientes;
+            });
+        }
+    </script>
+</body>
+</html>

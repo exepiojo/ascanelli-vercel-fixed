@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() if csrf_token else '' }}">
+    <title>Planilla de Producción - {{ implemento }} - Ascanelli</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            overflow-x: hidden;
+        }
+        
+        .header-production {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            padding: 30px 0;
+            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+        }
+        
+        .breadcrumb-custom {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 10px 20px;
+            margin-bottom: 30px;
+        }
+        
+        .breadcrumb-custom a {
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+        }
+        
+        .breadcrumb-custom a:hover {
+            color: white;
+        }
+        
+        .breadcrumb-custom .active {
+            color: white;
+            font-weight: 600;
+        }
+        
+        .planilla-table {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            overflow: hidden;
+            width: 100%;
+            max-width: 100vw;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .table thead th {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            border: none;
+            font-weight: 600;
+            padding: 15px 10px;
+            font-size: 0.9rem;
+        }
+        
+        .table tbody td {
+            padding: 12px 10px;
+            vertical-align: middle;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .chasis-number {
+            font-weight: 700;
+            color: #007bff;
+            font-size: 1.1rem;
+        }
+        
+        .estado-badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .estado-pendiente { background: #ffc107; color: #000; }
+        .estado-en-progreso { background: #17a2b8; color: white; }
+        .estado-terminado { background: #28a745; color: white; }
+        .estado-cancelado { background: #dc3545; color: white; }
+        
+        .action-buttons {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 1000;
+        }
+        
+        .btn-float {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-float:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 123, 255, 0.4);
+        }
+        
+        /* Estilos para columnas inmovilizadas */
+        .table-responsive-wrapper {
+            position: relative;
+            overflow: hidden;
+            border-radius: 10px;
+            width: 100%;
+            max-width: 100vw;
+            margin: 0;
+        }
+        
+        .table-container {
+            display: flex;
+            min-width: 0;
+            width: 100%;
+            max-width: 100vw;
+        }
+        
+        .table-fixed {
+            flex: 0 0 auto;
+            position: sticky;
+            left: 0;
+            z-index: 10;
+            background: white;
+            border-right: 2px solid #dee2e6;
+        }
+        
+        .table-scrollable {
+            flex: 1;
+            overflow-x: auto;
+            min-width: 0;
+            width: 100%;
+        }
+        
+        .table-scrollable table {
+            width: 100%;
+            min-width: 1400px; /* Aumentar de 1200px a 1400px para nombres completos */
+        }
+        
+        .table-fixed th,
+        .table-fixed td {
+            min-width: 80px; /* Reducir de 120px a 80px */
+            max-width: 100px; /* Agregar max-width */
+            border-right: none;
+            padding: 3px 2px; /* Igual que scrollables */
+            vertical-align: middle;
+            height: 30px; /* Asegurar misma altura que scrollables */
+            line-height: 30px; /* Forzar altura de línea */
+        }
+        
+        /* MODELO con ancho reducido */
+        .table-fixed th:nth-child(4),
+        .table-fixed td:nth-child(4) {
+            min-width: 60px; /* Aumentar ancho de MODELO 50% */
+            max-width: 60px;
+            width: 60px;
+        }
+        
+        /* Encabezados fijos más pequeños */
+        .table-fixed th {
+            font-size: 8px; /* Igual que scrollables para alinear */
+            font-weight: 600;
+        }
+        
+        /* Datos fijos más grandes */
+        .table-fixed td {
+            font-size: 13px; /* Datos fijos más grandes */
+            font-weight: 500;
+        }
+        
+        .table-scrollable th,
+        .table-scrollable td {
+            border-left: none;
+            padding: 3px 2px; /* Mantener consistencia con fijos */
+            vertical-align: middle;
+            height: 30px; /* Reducir de 45px a 30px */
+            line-height: 30px; /* Forzar altura de línea */
+            text-align: center;
+            font-size: 11px;
+            min-width: 45px; /* Aumentar para nombres completos */
+        }
+        
+        /* Encabezados más pequeños - sin saltos de línea */
+        .table-scrollable th {
+            font-size: 8px; /* Aumentar de 7px a 8px para mejor legibilidad */
+            font-weight: 600;
+            white-space: nowrap; /* Evitar saltos de línea */
+            overflow: hidden; /* Ocultar texto que no cabe */
+            text-overflow: ellipsis; /* Puntos suspensivos si no cabe */
+            padding: 3px 2px; /* Igual que fijos */
+            line-height: 30px; /* Forzar altura de línea igual a fijos */
+        }
+        
+        /* Columnas de producción (con círculos) - tamaño fijo ultra pequeño */
+        .table-scrollable th.puesto-produccion,
+        .table-scrollable td.puesto-produccion {
+            width: 35px;
+            min-width: 35px;
+            max-width: 35px;
+        }
+        
+        /* Columnas M1-M5 - ancho aumentado 2px */
+        .table-scrollable th.puesto-produccion:nth-child(19),
+        .table-scrollable th.puesto-produccion:nth-child(20),
+        .table-scrollable th.puesto-produccion:nth-child(21),
+        .table-scrollable th.puesto-produccion:nth-child(22),
+        .table-scrollable th.puesto-produccion:nth-child(23),
+        .table-scrollable td.puesto-produccion:nth-child(19),
+        .table-scrollable td.puesto-produccion:nth-child(20),
+        .table-scrollable td.puesto-produccion:nth-child(21),
+        .table-scrollable td.puesto-produccion:nth-child(22),
+        .table-scrollable td.puesto-produccion:nth-child(23) {
+            width: 37px;
+            min-width: 37px;
+            max-width: 37px;
+        }
+        
+        /* Columnas M4-M5 - ancho 42px */
+        .table-scrollable th.puesto-produccion:nth-child(24),
+        .table-scrollable th.puesto-produccion:nth-child(25),
+        .table-scrollable td.puesto-produccion:nth-child(24),
+        .table-scrollable td.puesto-produccion:nth-child(25) {
+            width: 42px;
+            min-width: 42px;
+            max-width: 42px;
+        }
+        
+        /* Columnas de datos (texto) - ultra simple */
+        .table-scrollable td.dato-texto {
+            font-size: 12px;
+            font-weight: 600;
+            text-align: left;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding: 4px 2px;
+        }
+        
+        .table-scrollable th:first-child,
+        .table-scrollable td:first-child {
+            border-left: 1px solid #dee2e6;
+        }
+        
+        /* Botones de control fijos sobre la tabla */
+        .table-controls {
+            position: sticky;
+            top: 0;
+            background: white;
+            padding: 10px 0;
+            z-index: 100;
+            border-bottom: 2px solid #dee2e6;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .table-controls .btn {
+            font-size: 12px;
+            padding: 6px 12px;
+        }
+        
+        .table-controls .badge {
+            font-size: 11px;
+            padding: 6px 10px;
+        }
+        
+        /* Columnas OBSERVACIONES con texto multilínea */
+        .caracteristica:has([data-observaciones]),
+        .entrega:has([data-observaciones]) {
+            max-width: 320px !important;
+            min-width: 280px !important;
+            width: 320px !important;
+        }
+        
+        .caracteristica:has([data-observaciones]) div,
+        .entrega:has([data-observaciones]) div {
+            white-space: normal !important;
+            word-wrap: break-word !important;
+            overflow-wrap: break-word !important;
+            hyphens: auto !important;
+            text-align: left !important;
+            padding: 2px !important;
+            line-height: 1.2 !important;
+            height: 32px !important; /* Forzar altura fija */
+            max-height: 32px !important; /* Forzar altura máxima */
+            overflow-y: auto !important;
+            box-sizing: border-box !important;
+        }
+        
+        /* Primera columna (checkbox) ultra estrecha */
+        .table-fixed th:nth-child(1),
+        .table-fixed td:nth-child(1) {
+            min-width: 25px !important;
+            max-width: 25px !important;
+            width: 25px !important;
+            padding: 2px !important;
+        }
+        
+        /* Todos los datos centrados en la celda */
+        .table-scrollable td,
+        .table-fixed td {
+            text-align: center !important;
+            vertical-align: middle;
+        }
+        
+        /* Círculos de estado para puestos de producción - ultra simple */
+        .estado-circle {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: inline-block;
+            margin: 0 auto;
+        }
+        
+        .estado-circle.cumplido {
+            background: #28a745;
+            border: 2px solid #1e7e34;
+        }
+        
+        .estado-circle.pendiente {
+            background: #dc3545;
+            border: 2px solid #bd2130;
+        }
+        
+        .estado-circle.en-progreso {
+            background: #ffc107;
+            border: 2px solid #e0a800;
+        }
+        
+        .table-fixed tr,
+        .table-scrollable tr {
+            height: 30px; /* Reducir de 45px a 30px (33% menor) */
+        }
+        
+        .table-fixed tr:hover,
+        .table-scrollable tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        /* Scrollbar personalizado */
+        .table-scrollable::-webkit-scrollbar {
+            height: 8px;
+        }
+        
+        .table-scrollable::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        
+        .table-scrollable::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        
+        .table-scrollable::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        
+        /* Sincronización de alturas de fila */
+        .table-fixed th,
+        .table-scrollable th {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            border: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .table-fixed th {
+            z-index: 30;
+        }
+        
+        /* Asegurar que las filas estén alineadas */
+        .table-fixed thead tr,
+        .table-scrollable thead tr {
+            display: table-row;
+            height: 40px; /* Altura fija para ambas tablas */
+            min-height: 40px;
+            max-height: 40px;
+        }
+        
+        .table-fixed thead tr th,
+        .table-scrollable thead tr th {
+            display: table-cell;
+            vertical-align: middle;
+            padding: 4px 6px; /* Ajustar padding */
+            height: 40px; /* Altura fija para ambas tablas */
+            min-height: 40px;
+            max-height: 40px;
+            line-height: 32px; /* Altura de línea ajustada */
+            white-space: nowrap; /* Evitar saltos de línea */
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .table-fixed tbody tr,
+        .table-scrollable tbody tr {
+            display: table-row;
+            height: 40px; /* Altura fija para ambas tablas */
+            min-height: 40px;
+            max-height: 40px;
+        }
+        
+        .table-fixed tbody tr td,
+        .table-scrollable tbody tr td {
+            display: table-cell;
+            vertical-align: middle;
+            padding: 4px 6px; /* Ajustar padding */
+            height: 40px; /* Altura fija para ambas tablas */
+            min-height: 40px;
+            max-height: 40px;
+            line-height: 32px; /* Altura de línea ajustada */
+            white-space: nowrap; /* Evitar saltos de línea */
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        /* Asegurar que los círculos de estado estén centrados */
+        .estado-circle {
+            display: inline-block;
+            margin: 0 auto;
+        }
+        
+        /* Scroll Superior Sincronizado - Simplificado */
+        .scroll-top-wrapper {
+            width: 100%;
+            margin-bottom: 0;
+        }
+        
+        .scroll-top {
+            width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            height: 20px;
+            background: #f8f9fa;
+        }
+        
+        .scroll-content {
+            width: 1400px; /* Aumentar de 1200px a 1400px */
+            height: 1px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #6c757d;
+        }
+        
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            color: #dee2e6;
+        }
+        
+        .empty-state h3 {
+            color: #495057;
+            margin-bottom: 1rem;
+        }
+        
+        .stats-icon {
+            font-size: 2rem;
+            margin-right: 10px;
+        }
+        
+        .stats-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #007bff;
+        }
+        
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+        
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header-production">
+        <div class="container-fluid" style="padding: 0 15px;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h2 mb-2">
+                        <span class="implemento-icon">🚛</span>
+                        Planilla de Producción - {{ implemento }}
+                    </h1>
+                    <p class="mb-0 opacity-75">Gestión de chasis y seguimiento de producción</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('planilla_produccion_seleccion') }}" class="btn btn-outline-light btn-lg">
+                        <i class="fas fa-arrow-left me-2"></i>
+                        Volver a Selección
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Breadcrumb -->
+            <nav aria-label="breadcrumb" class="breadcrumb-custom">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('seleccion_admin') }}">
+                            <i class="fas fa-home me-1"></i> Panel Admin
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('admin_opciones_produccion') }}">
+                            <i class="fas fa-industry me-1"></i> Producción
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('planilla_produccion_seleccion') }}">
+                            <i class="fas fa-clipboard-list me-1"></i> Planilla de Producción
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item active" aria-current="page">
+                        <i class="fas fa-clipboard-list me-1"></i> {{ implemento }}
+                    </li>
+                </ol>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Contenido Principal -->
+    <div class="container-fluid my-5" style="padding: 0 15px;">
+        <!-- Botones de acción flotantes sobre la tabla -->
+        <div class="table-controls mb-3">
+            <div class="d-flex justify-content-start align-items-center">
+                <div class="action-buttons">
+                    <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#agregarFilaModal" title="Agregar fila manual">
+                        <i class="fas fa-plus me-2"></i>
+                        Agregar Fila Manual
+                    </button>
+                    <button class="btn btn-warning btn-sm ms-2" onclick="editarSeleccionados()" title="Editar seleccionado" id="btnEditarSeleccionado" disabled>
+                        <i class="fas fa-edit me-2"></i>
+                        Editar Fila
+                    </button>
+                    <button class="btn btn-danger btn-sm ms-2" onclick="eliminarSeleccionados()" title="Eliminar seleccionados" id="btnEliminarSeleccionados" disabled>
+                        <i class="fas fa-trash me-2"></i>
+                        Eliminar Seleccionados
+                    </button>
+                    <button class="btn btn-primary btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#importarExcelModal">
+                        <i class="fas fa-file-excel me-2"></i>
+                        Importar Excel
+                    </button>
+                    <span class="badge bg-info ms-3">
+                        <i class="fas fa-info-circle me-1"></i>
+                        <span id="contadorSeleccionados">0</span> seleccionados
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botones de Control de Columnas -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="d-flex gap-2 flex-wrap">
+                    <button class="btn btn-outline-primary btn-sm" id="toggleCaracteristicas" onclick="toggleCaracteristicas()">
+                        <i class="fas fa-list me-2"></i>
+                        Ver Características
+                    </button>
+                    <button class="btn btn-outline-success btn-sm" id="toggleAvances" onclick="toggleAvances()">
+                        <i class="fas fa-tasks me-2"></i>
+                        Ver Avances
+                    </button>
+                    <button class="btn btn-outline-warning btn-sm" id="toggleEntrega" onclick="toggleEntrega()">
+                        <i class="fas fa-truck me-2"></i>
+                        Ver Entrega
+                    </button>
+                    <span class="badge bg-info ms-3">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Usa los botones para mostrar/ocultar columnas
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Búsqueda Simple -->
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="fas fa-search"></i>
+                    </span>
+                    <input type="text" class="form-control" id="busquedaGlobal" placeholder="Buscar en todas las columnas..." onkeyup="realizarBusquedaGlobal()">
+                    <button class="btn btn-outline-secondary" type="button" onclick="limpiarBusquedaGlobal()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla de Planilla Horizontal con Columnas Exactas -->
+        <div class="planilla-table" style="margin: 0; padding: 0; width: 100%;">
+            {% if planilla_datos %}
+            <!-- Scroll Superior Sincronizado -->
+            <div class="scroll-top-wrapper">
+                <div class="scroll-top" id="scrollTop">
+                    <div class="scroll-content"></div>
+                </div>
+            </div>
+            
+            <div class="table-responsive-wrapper">
+                <!-- Tabla con columnas inmovilizadas -->
+                <div class="table-container">
+                    <div class="table-fixed">
+                        <table class="table table-bordered table-striped table-hover mb-0" style="font-size: 12px;">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th style="width: 10px; text-align: center; padding: 0px;"></th>
+                                    <th style="font-size: 10px; font-weight: 600;">LANZAMIENTO</th>
+                                    <th style="font-size: 11px; font-weight: 600; width: 49px; min-width: 49px; text-align: center;">N° CHASIS</th>
+                                    <th style="font-size: 11px; font-weight: 600;">MODELO</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Filas con datos reales -->
+                                {% for item in planilla_datos %}
+                                <tr>
+                                    <td style="width: 10px; text-align: center; padding: 0px;">
+                                        <input type="checkbox" class="row-checkbox" value="{{ item.id }}" style="transform: scale(0.8);" onchange="updateSelectAll()">
+                                    </td>
+                                    <td style="font-size: 9px; font-weight: 500;">{{ item.lanzamiento or '-' }}</td>
+                                    <td class="chasis-number">{{ item.nro_chasis or '-' }}</td>
+                                    <td>{{ item.modelo or '-' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Tabla con scroll horizontal -->
+                    <div class="table-scrollable" id="tableScrollable">
+                        <table class="table table-bordered table-striped table-hover mb-0" style="font-size: 12px; width: 100%; min-width: 1200px;">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th class="caracteristica">CLIENTE</th>
+                                    <th class="caracteristica">TUBO</th>
+                                    <th class="caracteristica">ENCAMISADO</th>
+                                    <th class="caracteristica" style="min-width: 60px; max-width: 60px; width: 60px; font-size: 12px; line-height: 1.0; padding: 2px 1px;">
+                                    <div style="text-align: center; height: 25px; display: flex; flex-direction: column; justify-content: center;">
+                                        <div style="font-size: 12px; font-weight: 600;">TIPO</div>
+                                        <div style="font-size: 12px; font-weight: 600;">TUBO</div>
+                                    </div>
+                                </th>
+                                    <th class="caracteristica" style="min-width: 80px; max-width: 80px; width: 80px; font-size: 12px; line-height: 1.0; padding: 2px 1px;">
+                                    <div style="text-align: center; height: 25px; display: flex; flex-direction: column; justify-content: center;">
+                                        <div style="font-size: 12px; font-weight: 600;">TAMAÑO</div>
+                                        <div style="font-size: 12px; font-weight: 600;">CUBIERTA</div>
+                                    </div>
+                                </th>
+                                    <th class="caracteristica" style="min-width: 80px; max-width: 80px; width: 80px; font-size: 12px; line-height: 1.0; padding: 2px 1px;">
+                                    <div style="text-align: center; height: 25px; display: flex; flex-direction: column; justify-content: center;">
+                                        <div style="font-size: 12px; font-weight: 600;">MARCA</div>
+                                        <div style="font-size: 12px; font-weight: 600;">CUBIERTAS</div>
+                                    </div>
+                                </th>
+                                    <th class="caracteristica">COLOR</th>
+                                    <th class="caracteristica">BALANZA</th>
+                                    <th class="caracteristica">OBSERVACIONES</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">P1</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">P2</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">P3</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">P4</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">P5</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">P6</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">P7</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">P8</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">P9</th>
+                                    <th class="puesto-produccion" style="font-size: 9px; writing-mode: vertical-rl; text-orientation: mixed; height: 30px; padding: 2px 1px;">LAVADO</th>
+                                    <th class="puesto-produccion" style="font-size: 9px; writing-mode: vertical-rl; text-orientation: mixed; height: 30px; padding: 2px 1px;">PINTURA</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">M1</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">M2</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">M3</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">M4</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">M5</th>
+                                    <th class="entrega">ENTREGADA</th>
+                                    <th class="entrega">FECHA ENTREGA</th>
+                                    <th class="entrega">PEDIDO</th>
+                                    <th class="entrega">LIBERADA VENTAS</th>
+                                    <th class="entrega">LLANTAS OK</th>
+                                    <th class="entrega">CUBIERTAS OK</th>
+                                    <th class="entrega">OBSERVACIÓN 2</th>
+                                    <th class="entrega">PROVEEDOR DE SIN FIN</th>
+                                    <th class="entrega">DIAS EN CONSIGNACIÓN</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Los datos se renderizan desde JavaScript para mantener sincronización -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <!-- Contenedor de Paginación -->
+            <div class="card-footer bg-light" id="paginacionInfo">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span>Cargando...</span>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary" disabled>
+                            <i class="fas fa-chevron-left"></i> Anterior
+                        </button>
+                        <span class="mx-2">Página 1 de 1</span>
+                        <button class="btn btn-sm btn-outline-primary" disabled>
+                            Siguiente <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-clipboard-list"></i>
+                <h3>No hay chasis registrados</h3>
+                <p class="text-muted">No se encontraron chasis para el implemento {{ implemento }}</p>
+                <a href="{{ url_for('admin_plan') }}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>
+                    Agregar Chasis
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Datos de la planilla (pasados desde Flask)
+        const planillaDatos = {{ planilla_datos | tojson }};
+        
+        // JavaScript para sincronizar tablas y renderizar datos
+        document.addEventListener('DOMContentLoaded', function() {
+            const scrollTop = document.getElementById('scrollTop');
+            const tableScrollable = document.getElementById('tableScrollable');
+            const toggleAvances = document.getElementById('toggleAvances');
+            const toggleAvancesText = document.getElementById('toggleAvancesText');
+            
+            // Renderizar datos en la tabla scrollable
+            renderizarDatosScrollable();
+            
+            if (scrollTop && tableScrollable) {
+                // Sincronizar scroll simple
+                tableScrollable.addEventListener('scroll', function() {
+                    scrollTop.scrollLeft = this.scrollLeft;
+                });
+                
+                scrollTop.addEventListener('scroll', function() {
+                    tableScrollable.scrollLeft = this.scrollLeft;
+                });
+                
+                // Ajustar ancho del scroll superior
+                const scrollContent = scrollTop.querySelector('.scroll-content');
+                if (scrollContent) {
+                    scrollContent.style.width = '1400px'; /* Actualizar a 1400px */
+                }
+            }
+            
+            // Funcionalidad para ocultar/mostrar avances
+            if (toggleAvances && toggleAvancesText) {
+                let avancesVisible = true;
+                
+                toggleAvances.addEventListener('click', function() {
+                    const columnasAvances = document.querySelectorAll('.puesto-produccion');
+                    const icon = this.querySelector('i');
+                    
+                    if (avancesVisible) {
+                        // Ocultar columnas de avances
+                        columnasAvances.forEach(col => {
+                            col.style.display = 'none';
+                        });
+                        toggleAvancesText.textContent = 'Ver Avances';
+                        icon.className = 'fas fa-eye-slash me-2';
+                        avancesVisible = false;
+                    } else {
+                        // Mostrar columnas de avances
+                        columnasAvances.forEach(col => {
+                            col.style.display = '';
+                        });
+                        toggleAvancesText.textContent = 'Ocultar Avances';
+                        icon.className = 'fas fa-eye me-2';
+                        avancesVisible = true;
+                    }
+                });
+            }
+            
+            // Funcionalidad para ocultar/mostrar características
+            const toggleCaracteristicas = document.getElementById('toggleCaracteristicas');
+            const toggleCaracteristicasText = document.getElementById('toggleCaracteristicasText');
+            
+            if (toggleCaracteristicas && toggleCaracteristicasText) {
+                let caracteristicasVisible = true;
+                
+                toggleCaracteristicas.addEventListener('click', function() {
+                    const columnasCaracteristicas = document.querySelectorAll('.caracteristica');
+                    const icon = this.querySelector('i');
+                    
+                    if (caracteristicasVisible) {
+                        // Ocultar columnas de características
+                        columnasCaracteristicas.forEach(col => {
+                            col.style.display = 'none';
+                        });
+                        toggleCaracteristicasText.textContent = 'Ver Características';
+                        icon.className = 'fas fa-list-ul me-2';
+                        caracteristicasVisible = false;
+                    } else {
+                        // Mostrar columnas de características
+                        columnasCaracteristicas.forEach(col => {
+                            col.style.display = '';
+                        });
+                        toggleCaracteristicasText.textContent = 'Ocultar Características';
+                        icon.className = 'fas fa-list me-2';
+                        caracteristicasVisible = true;
+                    }
+                });
+            }
+        });
+        
+        // Configuración de paginación
+        const TAMANO_PAGINA = 50; // Mostrar 50 filas por página
+        let paginaActual = 1;
+        let datosFiltrados = [];
+        
+        // Función para renderizar datos con paginación
+        function renderizarDatosPaginados() {
+            const tbody = document.querySelector('#tableScrollable tbody');
+            const tbodyFixed = document.querySelector('.table-fixed tbody');
+            if (!tbody || !tbodyFixed) return;
+            
+            // Limpiar contenido existente
+            tbody.innerHTML = '';
+            tbodyFixed.innerHTML = '';
+            
+            // Calcular índices para la página actual
+            const inicio = (paginaActual - 1) * TAMANO_PAGINA;
+            const fin = Math.min(inicio + TAMANO_PAGINA, datosFiltrados.length);
+            
+            // Renderizar solo las filas de la página actual
+            for (let i = inicio; i < fin; i++) {
+                const item = datosFiltrados[i];
+                if (!item) continue;
+                
+                // Crear fila para tabla scrollable
+                const trScrollable = document.createElement('tr');
+                trScrollable.dataset.index = i;
+                trScrollable.innerHTML = generarFilaHTML(item, i, false);
+                tbody.appendChild(trScrollable);
+                
+                // Crear fila para tabla fija (checkboxes)
+                const trFixed = document.createElement('tr');
+                trFixed.innerHTML = generarFilaHTML(item, i, true);
+                tbodyFixed.appendChild(trFixed);
+            }
+            
+            // Actualizar información de paginación
+            actualizarInfoPaginacion();
+        }
+        
+        // Función para generar HTML de una fila
+        function generarFilaHTML(item, index, esFija) {
+            // Pre-calcular todos los estados de puestos para evitar llamadas repetitivas
+            const estadosPuestosHTML = {};
+            const puestos = ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9', 'LAVADO', 'PINTURA', 'M1', 'M2', 'M3', 'M4', 'M5'];
+            
+            for (const puesto of puestos) {
+                const estadosPorPuesto = item.estados_por_puesto || {};
+                const estadoPuesto = estadosPorPuesto[puesto];
+                
+                if (estadoPuesto === 'TERMINADO') {
+                    estadosPuestosHTML[puesto] = `<div class="estado-circle cumplido" title="${puesto}: TERMINADO"></div>`;
+                } else if (estadoPuesto === 'EN_PROGRESO') {
+                    estadosPuestosHTML[puesto] = `<div class="estado-circle en-progreso" title="${puesto}: EN_PROGRESO"></div>`;
+                } else {
+                    estadosPuestosHTML[puesto] = `<div class="estado-circle pendiente" title="${puesto}: PENDIENTE"></div>`;
+                }
+            }
+            
+            if (esFija) {
+                // Tabla fija - solo checkbox y columnas clave
+                return `
+                    <td><input type="checkbox" class="form-check-input checkbox-fila" data-id="${item.id}"></td>
+                    <td class="chasis-number">${item.nro_chasis || '-'}</td>
+                    <td class="text-center">
+                        <span class="estado-circle estado-${item.estado_color || 'danger'}" 
+                              title="${item.estado_texto || 'PENDIENTE'}"></span>
+                    </td>
+                    <td class="caracteristica">${item.cliente || '-'}</td>
+                    <td class="caracteristica">${item.tubo || '-'}</td>
+                    <td class="caracteristica">${item.color || '-'}</td>
+                `;
+            } else {
+                // Tabla scrollable - todas las columnas con estados pre-calculados
+                return `
+                    <td class="caracteristica">${item.cliente || '-'}</td>
+                    <td class="caracteristica">${item.tubo || '-'}</td>
+                    <td class="caracteristica">${item.encamisado || '-'}</td>
+                    <td class="caracteristica">${item.tipo_tubo || '-'}</td>
+                    <td class="caracteristica">${item.tamano_cubierta || '-'}</td>
+                    <td class="caracteristica">${item.marca_cubiertas || '-'}</td>
+                    <td class="caracteristica">${item.color || '-'}</td>
+                    <td class="caracteristica">${item.balanza || '-'}</td>
+                    <td class="caracteristica"><div data-observaciones>${item.observaciones || '-'}</div></td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['P1']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['P2']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['P3']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['P4']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['P5']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['P6']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['P7']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['P8']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['P9']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['LAVADO']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['PINTURA']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['M1']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['M2']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['M3']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['M4']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['M5']}</td>
+                    <td class="caracteristica">${item.entregada || '-'}</td>
+                    <td class="caracteristica">${item.fecha_entrega || '-'}</td>
+                    <td class="caracteristica">${item.pedido || '-'}</td>
+                    <td class="caracteristica">${item.liberada_ventas || '-'}</td>
+                    <td class="caracteristica">${item.llantas_ok || '-'}</td>
+                    <td class="caracteristica">${item.cubiertas_ok || '-'}</td>
+                    <td class="caracteristica"><div data-observaciones>${item.observaciones_2 || '-'}</div></td>
+                    <td class="caracteristica">${item.proveedor_sinfin || '-'}</td>
+                    <td class="caracteristica">${item.dias_consignacion || '-'}</td>
+                `;
+            }
+        }
+        
+        // Función para actualizar información de paginación
+        function actualizarInfoPaginacion() {
+            const totalPaginas = Math.ceil(datosFiltrados.length / TAMANO_PAGINA);
+            const infoDiv = document.getElementById('paginacionInfo');
+            
+            if (infoDiv) {
+                infoDiv.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>Mostrando ${((paginaActual - 1) * TAMANO_PAGINA) + 1} - ${Math.min(paginaActual * TAMANO_PAGINA, datosFiltrados.length)} de ${datosFiltrados.length} registros</span>
+                        <div>
+                            <button class="btn btn-sm btn-outline-primary" onclick="cambiarPagina(${paginaActual - 1})" ${paginaActual === 1 ? 'disabled' : ''}>
+                                <i class="fas fa-chevron-left"></i> Anterior
+                            </button>
+                            <span class="mx-2">Página ${paginaActual} de ${totalPaginas}</span>
+                            <button class="btn btn-sm btn-outline-primary" onclick="cambiarPagina(${paginaActual + 1})" ${paginaActual === totalPaginas ? 'disabled' : ''}>
+                                Siguiente <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        // Función para cambiar de página
+        function cambiarPagina(nuevaPagina) {
+            const totalPaginas = Math.ceil(datosFiltrados.length / TAMANO_PAGINA);
+            if (nuevaPagina >= 1 && nuevaPagina <= totalPaginas) {
+                paginaActual = nuevaPagina;
+                renderizarDatosPaginados();
+                // Scroll al inicio de la tabla
+                document.querySelector('.table-scrollable').scrollTop = 0;
+            }
+        }
+        
+        // Función original de renderizado (ahora con paginación)
+        function renderizarDatosScrollable() {
+            // Inicializar datos filtrados con todos los datos
+            datosFiltrados = [...planillaDatos];
+            paginaActual = 1;
+            renderizarDatosPaginados();
+        }
+        
+        // Función de búsqueda global actualizada para paginación
+        function realizarBusquedaGlobal() {
+            const textoBusqueda = document.getElementById('busquedaGlobal').value.toLowerCase().trim();
+            
+            if (textoBusqueda === '') {
+                datosFiltrados = [...planillaDatos];
+            } else {
+                datosFiltrados = planillaDatos.filter(item => {
+                    return Object.values(item).some(valor => 
+                        valor && valor.toString().toLowerCase().includes(textoBusqueda)
+                    );
+                });
+            }
+            
+            paginaActual = 1;
+            renderizarDatosPaginados();
+        }
+        
+        // Función para limpiar búsqueda
+        function limpiarBusquedaGlobal() {
+            document.getElementById('busquedaGlobal').value = '';
+            datosFiltrados = [...planillaDatos];
+            paginaActual = 1;
+            renderizarDatosPaginados();
+        }
+        
+        // Función para mostrar todas las filas (actualizada)
+        function mostrarTodasLasFilas() {
+            datosFiltrados = [...planillaDatos];
+            paginaActual = 1;
+            renderizarDatosPaginados();
+        }
+        
+        // Actualizar función de búsqueda para trabajar con paginación
+        function buscarEnTabla(texto) {
+            console.log('Buscando:', texto);
+            
+            const tbodyScrollable = document.querySelector('#tableScrollable tbody');
+            const filasScrollable = tbodyScrollable.querySelectorAll('tr');
+            
+            const tbodyFixed = document.querySelector('.table-fixed tbody');
+            const filasFixed = tbodyFixed.querySelectorAll('tr');
+            
+            let filasVisibles = 0;
+            
+            for (let i = 0; i < filasScrollable.length; i++) {
+                const filaScrollable = filasScrollable[i];
+                const filaFixed = filasFixed[i];
+                const textoFila = filaScrollable.textContent.toLowerCase();
+                
+                if (textoFila.includes(texto.toLowerCase())) {
+                    filaScrollable.style.display = '';
+                    filaFixed.style.display = '';
+                    filasVisibles++;
+                } else {
+                    filaScrollable.style.display = 'none';
+                    filaFixed.style.display = 'none';
+                }
+            }
+            
+            console.log(`Se encontraron ${filasVisibles} filas visibles`);
+        }
+        
+        // Inicialización cuando el DOM esté listo
+        document.addEventListener('DOMContentLoaded', function() {
+            renderizarDatosScrollable();
+        });
+        
+    </script>
+
+</script>
+{% endblock %}
+</body>
+</html>

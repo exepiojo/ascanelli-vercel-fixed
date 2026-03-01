@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Seleccionar Modelo - Mixer</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <link rel="shortcut icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .card { border-radius: 12px; border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.08); transition: transform 0.2s; }
+        .card:hover { transform: translateY(-5px); }
+        .header-section { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 30px; border-radius: 12px; margin-bottom: 30px; }
+        .modelo-card { 
+            border-left: 5px solid #28a745; 
+            cursor: pointer;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modelo-card:hover { 
+            background-color: #f8fff8;
+            border-left-color: #20c997;
+        }
+        .modelo-title { font-size: 1.8rem; font-weight: bold; color: #333; }
+        .modelo-subtitle { color: #666; font-size: 1.1rem; }
+        .btn-back { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); }
+        .btn-back:hover { background: rgba(255,255,255,0.3); }
+        .navbar-brand { display: flex; align-items: center; gap: 10px; }
+        .navbar-logo { width: 35px; height: 35px; object-fit: contain; }
+    </style>
+</head>
+<body class="bg-light">
+
+<nav class="navbar navbar-dark bg-dark mb-4 shadow">
+    <div class="container-fluid">
+        <span class="navbar-brand mb-0 h1">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Ascanelli" class="navbar-logo">
+            ASCANELLI - PRODUCCIÓN
+        </span>
+        <div class="d-flex align-items-center gap-2">
+            <span class="text-light me-3 small">Operario: <strong>{{ current_user.nombre }}</strong></span>
+            <a href="{{ url_for('seleccion_puesto') }}" class="btn btn-outline-light btn-sm me-2">Volver</a>
+            <a href="/logout" class="btn btn-outline-danger btn-sm">Salir</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container mt-4">
+    <div class="header-section text-center shadow">
+        <h2 class="mb-0">🎛️ Seleccionar Modelo de MIXER</h2>
+        <p class="mb-0 opacity-75">Elegí el modelo específico para ver tu plan de trabajo</p>
+    </div>
+
+    <div class="row g-4">
+        {% for modelo in modelos %}
+        <div class="col-md-4">
+            <a href="{{ url_for('ver_plan_mixer', implemento=modelo) }}" class="text-decoration-none">
+                <div class="card modelo-card shadow-sm h-100">
+                    <div class="card-body text-center">
+                        <div class="modelo-title">{{ modelo }}</div>
+                        <div class="modelo-subtitle">Mixer Industrial</div>
+                        <div class="mt-3">
+                            <span class="badge bg-success fs-6">Ver Plan</span>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Información adicional -->
+    <div class="card mt-4 bg-light">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-12">
+                    <h5 class="text-success mb-3">📋 Información de Modelos</h5>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <strong>M1600</strong>
+                            <p class="text-muted small">Mixer de 1600 kg capacidad</p>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>M2000</strong>
+                            <p class="text-muted small">Mixer de 2000 kg capacidad</p>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>M2600</strong>
+                            <p class="text-muted small">Mixer de 2600 kg capacidad</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

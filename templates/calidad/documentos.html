@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentos - Sistema de Gestión de Calidad</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .doc-card {
+            transition: transform 0.2s;
+            border-left: 4px solid;
+        }
+        .doc-card:hover {
+            transform: translateY(-2px);
+        }
+        .doc-poe { border-left-color: #28a745; }
+        .doc-proceso { border-left-color: #17a2b8; }
+        .doc-registro { border-left-color: #ffc107; }
+        .doc-formato { border-left-color: #fd7e14; }
+        .doc-manual { border-left-color: #6f42c1; }
+        
+        .estado-badge {
+            font-size: 0.75rem;
+        }
+        
+        .version-badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('calidad_dashboard') }}">
+                <i class="fas fa-arrow-left me-2"></i>Documentos
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a href="{{ url_for('logout') }}" class="nav-link">
+                    <i class="fas fa-sign-out-alt"></i> Salir
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1 class="h3 mb-0">Control Documental</h1>
+                        <p class="text-muted mb-0">Repositorio centralizado de documentos del sistema</p>
+                    </div>
+                    <a href="{{ url_for('calidad_documento_nuevo') }}" class="btn btn-primary">
+                        <i class="fas fa-upload me-1"></i>Subir Documento
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Estadísticas -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h4 class="text-primary">{{ documentos|length }}</h4>
+                        <small class="text-muted">Total Documentos</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h4 class="text-success">{{ documentos|selectattr('estado', 'equalto', 'VIGENTE')|list|length }}</h4>
+                        <small class="text-muted">Vigentes</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h4 class="text-warning">{{ documentos|selectattr('obligatorio', 'equalto', True)|list|length }}</h4>
+                        <small class="text-muted">Obligatorios</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h4 class="text-info">{{ documentos|selectattr('estado', 'equalto', 'OBSOLETO')|list|length }}</h4>
+                        <small class="text-muted">Obsoletos</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <label class="form-label">Tipo</label>
+                                <select class="form-select" id="filtroTipo">
+                                    <option value="">Todos los tipos</option>
+                                    <option value="POE">POE</option>
+                                    <option value="PROCESO">Proceso</option>
+                                    <option value="REGISTRO">Registro</option>
+                                    <option value="FORMATO">Formato</option>
+                                    <option value="MANUAL">Manual</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Categoría</label>
+                                <select class="form-select" id="filtroCategoria">
+                                    <option value="">Todas las categorías</option>
+                                    <option value="CALIDAD">Calidad</option>
+                                    <option value="SEGURIDAD">Seguridad</option>
+                                    <option value="PRODUCCION">Producción</option>
+                                    <option value="MANTENIMIENTO">Mantenimiento</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Estado</label>
+                                <select class="form-select" id="filtroEstado">
+                                    <option value="">Todos los estados</option>
+                                    <option value="BORRADOR">Borrador</option>
+                                    <option value="REVISION">Revisión</option>
+                                    <option value="APROBADO">Aprobado</option>
+                                    <option value="VIGENTE">Vigente</option>
+                                    <option value="OBSOLETO">Obsoleto</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Sector</label>
+                                <select class="form-select" id="filtroSector">
+                                    <option value="">Todos los sectores</option>
+                                    <option value="PRODUCCION">Producción</option>
+                                    <option value="CALIDAD">Calidad</option>
+                                    <option value="SOLDADURA">Soldadura</option>
+                                    <option value="PINTURA">Pintura</option>
+                                    <option value="MONTAJE">Montaje</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de Documentos -->
+        <div class="row">
+            {% if documentos %}
+                {% for doc in documentos %}
+                <div class="col-lg-6 mb-4 doc-item" 
+                     data-tipo="{{ doc.tipo }}" 
+                     data-categoria="{{ doc.categoria }}" 
+                     data-estado="{{ doc.estado }}" 
+                     data-sector="{{ doc.sector }}">
+                    <div class="card doc-card doc-{{ doc.tipo.lower() }} h-100">
+                        <div class="card-header d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="d-flex align-items-center gap-2 mb-1">
+                                    <h6 class="mb-0">{{ doc.codigo }}</h6>
+                                    <span class="version-badge">{{ doc.version }}</span>
+                                    {% if doc.obligatorio %}
+                                    <span class="badge bg-warning">Obligatorio</span>
+                                    {% endif %}
+                                </div>
+                                <h5 class="mb-1">{{ doc.titulo }}</h5>
+                                <small class="text-muted">{{ doc.tipo }} - {{ doc.categoria or 'Sin categoría' }}</small>
+                            </div>
+                            <div>
+                                {% if doc.estado == 'VIGENTE' %}
+                                <span class="badge bg-success">Vigente</span>
+                                {% elif doc.estado == 'APROBADO' %}
+                                <span class="badge bg-primary">Aprobado</span>
+                                {% elif doc.estado == 'REVISION' %}
+                                <span class="badge bg-warning">Revisión</span>
+                                {% elif doc.estado == 'BORRADOR' %}
+                                <span class="badge bg-secondary">Borrador</span>
+                                {% else %}
+                                <span class="badge bg-danger">Obsoleto</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small">{{ doc.descripcion[:100] }}{% if doc.description|length > 100 %}...{% endif %}</p>
+                            
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <small class="text-muted">Creado por:</small><br>
+                                    <strong>{{ doc.creado_por }}</strong>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted">Fecha creación:</small><br>
+                                    <strong>{{ doc.fecha_creacion.strftime('%d/%m/%Y') }}</strong>
+                                </div>
+                            </div>
+
+                            {% if doc.fecha_vigencia %}
+                            <div class="mb-2">
+                                <small class="text-muted">Vigencia:</small>
+                                <span class="text-success">
+                                    <i class="fas fa-calendar"></i> {{ doc.fecha_vigencia.strftime('%d/%m/%Y') }}
+                                </span>
+                            </div>
+                            {% endif %}
+
+                            {% if doc.proxima_revision %}
+                            <div class="mb-2">
+                                <small class="text-muted">Próxima revisión:</small>
+                                <span class="text-warning">
+                                    <i class="fas fa-clock"></i> {{ doc.proxima_revision.strftime('%d/%m/%Y') }}
+                                </span>
+                            </div>
+                            {% endif %}
+
+                            {% if doc.aprobado_por %}
+                            <div class="mb-2">
+                                <small class="text-muted">Aprobado por:</small><br>
+                                <strong>{{ doc.aprobado_por }}</strong>
+                            </div>
+                            {% endif %}
+
+                            <div class="d-flex justify-content-between">
+                                <div class="btn-group" role="group">
+                                    {% if doc.archivo %}
+                                    <a href="{{ url_for('static', filename='uploads/' + doc.archivo) }}" 
+                                       class="btn btn-success btn-sm" target="_blank">
+                                        <i class="fas fa-download me-1"></i>Descargar
+                                    </a>
+                                    {% endif %}
+                                    <button class="btn btn-outline-primary btn-sm" onclick="verHistorial({{ doc.id }})">
+                                        <i class="fas fa-history me-1"></i>Historial
+                                    </button>
+                                </div>
+                                <div class="btn-group" role="group">
+                                    <button class="btn btn-outline-warning btn-sm">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    {% if doc.estado == 'VIGENTE' %}
+                                    <button class="btn btn-outline-danger btn-sm">
+                                        <i class="fas fa-archive"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-12">
+                    <div class="text-center py-5">
+                        <i class="fas fa-file-alt fa-4x text-muted mb-3"></i>
+                        <h4>No hay documentos registrados</h4>
+                        <p class="text-muted">Sube tu primer documento para comenzar el control documental</p>
+                        <a href="{{ url_for('calidad_documento_nuevo') }}" class="btn btn-primary">
+                            <i class="fas fa-upload me-1"></i>Subir Documento
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Modal Historial -->
+    <div class="modal fade" id="historialModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Historial de Cambios</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="historialContent">
+                        <!-- Historial dinámico -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Datos simulados de historial (en producción vendrían de la BD)
+        const historialData = {
+            {% for doc in documentos %}
+            {{ doc.id }}: [
+                {
+                    fecha: "{{ doc.fecha_creacion.strftime('%d/%m/%Y %H:%M') }}",
+                    version: "{{ doc.version }}",
+                    cambio: "Creación del documento",
+                    autor: "{{ doc.creado_por }}",
+                    tipo: "creacion"
+                }
+                {% if doc.estado == 'VIGENTE' and doc.fecha_vigencia %}
+                ,{
+                    fecha: "{{ doc.fecha_vigencia.strftime('%d/%m/%Y %H:%M') }}",
+                    version: "{{ doc.version }}",
+                    cambio: "Aprobación y vigencia",
+                    autor: "{{ doc.aprobado_por or 'Sistema' }}",
+                    tipo: "aprobacion"
+                }
+                {% endif %}
+            ]{% if not loop.last %},{% endif %}
+            {% endfor %}
+        };
+
+        function verHistorial(docId) {
+            const historial = historialData[docId] || [];
+            const historialContent = document.getElementById('historialContent');
+            
+            if (historial.length === 0) {
+                historialContent.innerHTML = '<p class="text-muted">No hay historial de cambios</p>';
+            } else {
+                let html = '<div class="timeline">';
+                historial.forEach(cambio => {
+                    const iconClass = cambio.tipo === 'creacion' ? 'fa-plus text-success' :
+                                     cambio.tipo === 'aprobacion' ? 'fa-check text-primary' :
+                                     'fa-edit text-warning';
+                    
+                    html += `
+                        <div class="d-flex align-items-start mb-3">
+                            <i class="fas ${iconClass} me-3 mt-1"></i>
+                            <div>
+                                <h6 class="mb-1">Versión ${cambio.version}</h6>
+                                <small class="text-muted">${cambio.fecha}</small>
+                                <p class="mb-0 small">${cambio.cambio}</p>
+                                <small class="text-muted">por ${cambio.autor}</small>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                historialContent.innerHTML = html;
+            }
+            
+            new bootstrap.Modal(document.getElementById('historialModal')).show();
+        }
+
+        // Filtros
+        function aplicarFiltros() {
+            const tipo = document.getElementById('filtroTipo').value;
+            const categoria = document.getElementById('filtroCategoria').value;
+            const estado = document.getElementById('filtroEstado').value;
+            const sector = document.getElementById('filtroSector').value;
+            
+            const items = document.querySelectorAll('.doc-item');
+            
+            items.forEach(item => {
+                let mostrar = true;
+                
+                if (tipo && item.dataset.tipo !== tipo) mostrar = false;
+                if (categoria && item.dataset.categoria !== categoria) mostrar = false;
+                if (estado && item.dataset.estado !== estado) mostrar = false;
+                if (sector && item.dataset.sector !== sector) mostrar = false;
+                
+                item.style.display = mostrar ? 'block' : 'none';
+            });
+        }
+
+        // Event listeners para filtros
+        document.getElementById('filtroTipo').addEventListener('change', aplicarFiltros);
+        document.getElementById('filtroCategoria').addEventListener('change', aplicarFiltros);
+        document.getElementById('filtroEstado').addEventListener('change', aplicarFiltros);
+        document.getElementById('filtroSector').addEventListener('change', aplicarFiltros);
+    </script>
+</body>
+</html>

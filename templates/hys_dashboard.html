@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>H&S - Seguridad Industrial</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .safety-header {
+            background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
+            color: white;
+            padding: 20px 0;
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+        }
+        
+        .quick-action-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            border: none;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .quick-action-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+        }
+        
+        .quick-action-card.danger {
+            border-left: 6px solid #dc3545;
+        }
+        
+        .quick-action-card.warning {
+            border-left: 6px solid #ffc107;
+        }
+        
+        .quick-action-card.info {
+            border-left: 6px solid #17a2b8;
+        }
+        
+        .quick-action-card.success {
+            border-left: 6px solid #28a745;
+        }
+        
+        .action-btn {
+            width: 100%;
+            padding: 20px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            border-radius: 15px;
+            border: none;
+            transition: all 0.3s ease;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        .action-btn:hover {
+            transform: scale(1.02);
+        }
+        
+        .btn-danger-safety {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+        }
+        
+        .btn-warning-safety {
+            background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+            color: #212529;
+        }
+        
+        .btn-info-safety {
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+            color: white;
+        }
+        
+        .btn-success-safety {
+            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+            color: white;
+        }
+        
+        .zone-indicator {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+        
+        .zone-safe { background: #d4edda; color: #155724; }
+        .zone-warning { background: #fff3cd; color: #856404; }
+        .zone-danger { background: #f8d7da; color: #721c24; }
+        
+        .risk-map {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            min-height: 400px;
+            position: relative;
+        }
+        
+        .risk-zone {
+            position: absolute;
+            border-radius: 15px;
+            padding: 10px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: white;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .risk-zone:hover {
+            transform: scale(1.1);
+            z-index: 10;
+        }
+        
+        .zone-high { background: rgba(220, 53, 69, 0.8); }
+        .zone-medium { background: rgba(255, 193, 7, 0.8); }
+        .zone-low { background: rgba(40, 167, 69, 0.8); }
+        
+        .epp-checklist {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .epp-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+        }
+        
+        .epp-item:hover {
+            background: #e9ecef;
+        }
+        
+        .epp-checkbox {
+            width: 25px;
+            height: 25px;
+            margin-right: 15px;
+            cursor: pointer;
+        }
+        
+        .incident-report {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        
+        .audio-recorder {
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            margin: 15px 0;
+            transition: all 0.3s ease;
+        }
+        
+        .audio-recorder.recording {
+            background: #f8d7da;
+            border-color: #dc3545;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .qr-scanner {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .scanner-frame {
+            border: 3px solid #17a2b8;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            position: relative;
+        }
+        
+        .scanner-frame::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: #17a2b8;
+            animation: scan 2s linear infinite;
+        }
+        
+        @keyframes scan {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+        
+        .emergency-contacts {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        
+        .contact-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+        }
+        
+        .contact-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-size: 1.2rem;
+            color: white;
+        }
+        
+        .stats-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .stats-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .floating-help {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        
+        .floating-help:hover {
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="safety-header">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-3">
+                    <a href="{{ url_for('seleccion_admin') }}" class="btn btn-outline-light btn-sm">
+                        <i class="fas fa-arrow-left me-1"></i>Volver al Menú
+                    </a>
+                    <img src="{{ url_for('static', filename='logo.png') }}" alt="Ascanelli" class="me-3" style="height: 40px;">
+                    <div>
+                        <h1 class="h3 mb-0">Higiene y Seguridad Industrial</h1>
+                    </div>
+                </div>
+                <div>
+                    <span class="zone-indicator zone-safe">
+                        <i class="fas fa-map-marker-alt me-2"></i>{{ current_user.sector or 'ZONA NO DETECTADA' }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mt-4">
+        <!-- Botones de Acción Rápida -->
+        <div class="row mb-4">
+            <div class="col-lg-6 mb-3">
+                <div class="quick-action-card danger">
+                    <h3 class="h5 mb-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Reporte de Incidente "Casi-Accidente"
+                    </h3>
+                    <button class="action-btn btn-danger-safety" onclick="openIncidentReport()">
+                        <i class="fas fa-camera fa-2x"></i>
+                        <span>REPORTAR INCIDENTE</span>
+                    </button>
+                    <div class="audio-recorder" id="audioRecorder">
+                        <i class="fas fa-microphone fa-2x mb-2"></i>
+                        <p class="mb-0">Presiona para grabar audio describiendo la condición insegura</p>
+                        <small class="text-muted">Máximo 30 segundos</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-6 mb-3">
+                <div class="quick-action-card warning">
+                    <h3 class="h5 mb-3">
+                        <i class="fas fa-hard-hat me-2"></i>
+                        Gestión de EPP
+                    </h3>
+                    <button class="action-btn btn-warning-safety" onclick="openEPPChecklist()">
+                        <i class="fas fa-clipboard-check fa-2x"></i>
+                        <span>CHECKLIST DIARIO EPP</span>
+                    </button>
+                    <button class="action-btn btn-info-safety" onclick="openEPPRequest()">
+                        <i class="fas fa-box fa-2x"></i>
+                        <span>SOLICITAR RECARGO EPP</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mapa de Riesgos y Estadísticas -->
+        <div class="row mb-4">
+            <div class="col-lg-8 mb-3">
+                <div class="risk-map">
+                    <h3 class="h5 mb-3">
+                        <i class="fas fa-map-marked-alt me-2"></i>
+                        Mapa de Riesgos Interactivo
+                    </h3>
+                    <div style="position: relative; height: 350px; background: #f8f9fa; border-radius: 15px;">
+                        <!-- Zonas de riesgo simuladas -->
+                        <div class="risk-zone zone-high" style="top: 20px; left: 20px; width: 120px;">
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            SOLDADURA P1-P3
+                        </div>
+                        <div class="risk-zone zone-medium" style="top: 20px; right: 20px; width: 120px;">
+                            <i class="fas fa-exclamation-circle me-1"></i>
+                            PINTURA
+                        </div>
+                        <div class="risk-zone zone-low" style="bottom: 20px; left: 20px; width: 120px;">
+                            <i class="fas fa-check-circle me-1"></i>
+                            MONTAJE M1-M3
+                        </div>
+                        <div class="risk-zone zone-medium" style="bottom: 20px; right: 20px; width: 120px;">
+                            <i class="fas fa-exclamation-circle me-1"></i>
+                            ALMACÉN
+                        </div>
+                        <div class="risk-zone zone-high" style="top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100px;">
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            ZONA CARGA
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <span class="badge bg-danger me-2">Alto Riesgo</span>
+                        <span class="badge bg-warning me-2">Riesgo Medio</span>
+                        <span class="badge bg-success">Bajo Riesgo</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-4 mb-3">
+                <div class="stats-card mb-3">
+                    <div class="stats-number text-danger">0</div>
+                    <div class="text-muted">Incidentes Hoy</div>
+                </div>
+                <div class="stats-card mb-3">
+                    <div class="stats-number text-warning">3</div>
+                    <div class="text-muted">Condiciones Inseguras</div>
+                </div>
+                <div class="stats-card">
+                    <div class="stats-number text-success">98%</div>
+                    <div class="text-muted">Cumplimiento EPP</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Escáner QR y Contactos -->
+        <div class="row mb-4">
+            <div class="col-lg-8 mb-3">
+                <div class="qr-scanner">
+                    <h3 class="h5 mb-3">
+                        <i class="fas fa-qrcode me-2"></i>
+                        Fichas de Seguridad por QR
+                    </h3>
+                    <div class="scanner-frame">
+                        <i class="fas fa-qrcode fa-3x mb-3 text-muted"></i>
+                        <p class="mb-0">Apunta la cámara al código QR de la maquinaria</p>
+                        <button class="btn btn-primary mt-3" onclick="startQRScanner()">
+                            <i class="fas fa-camera me-2"></i>
+                            Activar Escáner
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-4 mb-3">
+                <div class="emergency-contacts">
+                    <h3 class="h5 mb-3">
+                        <i class="fas fa-phone-alt me-2"></i>
+                        Contactos de Emergencia
+                    </h3>
+                    <div class="contact-item">
+                        <div class="contact-icon" style="background: #dc3545;">
+                            <i class="fas fa-ambulance"></i>
+                        </div>
+                        <div>
+                            <strong>Emergencia Médica</strong><br>
+                            <small>Interno: 5555 | Externo: 107</small>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <div class="contact-icon" style="background: #ffc107;">
+                            <i class="fas fa-fire-extinguisher"></i>
+                        </div>
+                        <div>
+                            <strong>Bomberos</strong><br>
+                            <small>Interno: 5556 | Externo: 103</small>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <div class="contact-icon" style="background: #17a2b8;">
+                            <i class="fas fa-hard-hat"></i>
+                        </div>
+                        <div>
+                            <strong>Seguridad H&S</strong><br>
+                            <small>Interno: 5557</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botón Flotante de Ayuda -->
+    <div class="floating-help" onclick="openHelp()">
+        <i class="fas fa-question"></i>
+    </div>
+
+    <!-- Modal de Reporte de Incidente -->
+    <div class="modal fade" id="incidentModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Reporte de Incidente
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="incidentForm">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Tipo de Incidente</label>
+                                <select class="form-select form-select-lg">
+                                    <option>Casi-Accidente</option>
+                                    <option>Condición Insegura</option>
+                                    <option>Acto Inseguro</option>
+                                    <option>Incidente Leve</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Sector</label>
+                                <select class="form-select form-select-lg">
+                                    <option>SOLDADURA</option>
+                                    <option>PINTURA</option>
+                                    <option>MONTAJE</option>
+                                    <option>ALMACÉN</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Descripción del Incidente</label>
+                            <textarea class="form-control" rows="4" placeholder="Describe detalladamente lo ocurrido..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Evidencia Fotográfica</label>
+                            <input type="file" class="form-control" accept="image/*" multiple>
+                            <small class="text-muted">Puedes subir hasta 3 fotos</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Audio de Descripción (opcional)</label>
+                            <div class="d-flex align-items-center">
+                                <button type="button" class="btn btn-outline-danger me-2" onclick="toggleAudioRecording()">
+                                    <i class="fas fa-microphone"></i> Grabar
+                                </button>
+                                <span id="audioStatus">Listo para grabar</span>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" onclick="submitIncident()">
+                        <i class="fas fa-paper-plane me-2"></i>
+                        Enviar Reporte
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Checklist EPP -->
+    <div class="modal fade" id="eppModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title">
+                        <i class="fas fa-hard-hat me-2"></i>
+                        Checklist Diario de EPP
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="eppForm">
+                        <div class="epp-checklist">
+                            <div class="epp-item">
+                                <input type="checkbox" class="epp-checkbox" id="gafas">
+                                <label for="gafes" class="mb-0 flex-grow-1">
+                                    <i class="fas fa-glasses me-2"></i>
+                                    <strong>Gafas de Seguridad</strong>
+                                    <small class="d-block text-muted">Protección ocular contra partículas</small>
+                                </label>
+                            </div>
+                            <div class="epp-item">
+                                <input type="checkbox" class="epp-checkbox" id="botines">
+                                <label for="botines" class="mb-0 flex-grow-1">
+                                    <i class="fas fa-shoe-prints me-2"></i>
+                                    <strong>Botines de Seguridad</strong>
+                                    <small class="d-block text-muted">Punta de acero y antideslizante</small>
+                                </label>
+                            </div>
+                            <div class="epp-item">
+                                <input type="checkbox" class="epp-checkbox" id="guantes">
+                                <label for="guantes" class="mb-0 flex-grow-1">
+                                    <i class="fas fa-mitten me-2"></i>
+                                    <strong>Guantes de Trabajo</strong>
+                                    <small class="d-block text-muted">Adecuados para la tarea</small>
+                                </label>
+                            </div>
+                            <div class="epp-item">
+                                <input type="checkbox" class="epp-checkbox" id="proteccion_auditiva">
+                                <label for="proteccion_auditiva" class="mb-0 flex-grow-1">
+                                    <i class="fas fa-headphones me-2"></i>
+                                    <strong>Protección Auditiva</strong>
+                                    <small class="d-block text-muted">Tapones o auriculares</small>
+                                </label>
+                            </div>
+                            <div class="epp-item">
+                                <input type="checkbox" class="epp-checkbox" id="casco">
+                                <label for="casco" class="mb-0 flex-grow-1">
+                                    <i class="fas fa-hard-hat me-2"></i>
+                                    <strong>Casco de Seguridad</strong>
+                                    <small class="d-block text-muted">Para zonas de riesgo de caída</small>
+                                </label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-warning" onclick="submitEPPChecklist()">
+                        <i class="fas fa-check me-2"></i>
+                        Confirmar Checklist
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Funciones principales
+        function openIncidentReport() {
+            const modal = new bootstrap.Modal(document.getElementById('incidentModal'));
+            modal.show();
+        }
+        
+        function openEPPChecklist() {
+            const modal = new bootstrap.Modal(document.getElementById('eppModal'));
+            modal.show();
+        }
+        
+        function openEPPRequest() {
+            // Implementar solicitud de recargo EPP
+            alert('Función de solicitud de recargo EPP - En desarrollo');
+        }
+        
+        function startQRScanner() {
+            // Implementar escáner QR
+            alert('Escáner QR - En desarrollo');
+        }
+        
+        function openHelp() {
+            alert('Sistema de Ayuda H&S - En desarrollo');
+        }
+        
+        function submitIncident() {
+            // Implementar envío de incidente
+            alert('Incidente reportado correctamente');
+            bootstrap.Modal.getInstance(document.getElementById('incidentModal')).hide();
+        }
+        
+        function submitEPPChecklist() {
+            // Implementar envío de checklist EPP
+            alert('Checklist EPP registrado correctamente');
+            bootstrap.Modal.getInstance(document.getElementById('eppModal')).hide();
+        }
+        
+        function toggleAudioRecording() {
+            const recorder = document.getElementById('audioRecorder');
+            const status = document.getElementById('audioStatus');
+            
+            if (recorder.classList.contains('recording')) {
+                recorder.classList.remove('recording');
+                status.textContent = 'Listo para grabar';
+                // Detener grabación
+            } else {
+                recorder.classList.add('recording');
+                status.textContent = 'Grabando...';
+                // Iniciar grabación
+            }
+        }
+        
+        // Detección de ubicación (simulada)
+        document.addEventListener('DOMContentLoaded', function() {
+            // En una implementación real, esto usaría geolocalización interna
+            console.log('Detectando sector actual...');
+        });
+    </script>
+</body>
+</html>

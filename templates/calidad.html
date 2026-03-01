@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reportes de Calidad - Ascanelli</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <link rel="shortcut icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f4f7f6; }
+        .header-section { background: #212529; color: white; padding: 25px; border-radius: 12px; margin-bottom: 25px; }
+        .card { border-radius: 12px; border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.08); }
+        .stat-card { text-align: center; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 12px; }
+        .stat-card.warning { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .stat-card.info { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .stat-card.success { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+        .stat-value { font-size: 2.5rem; font-weight: bold; }
+        .stat-label { font-size: 0.9rem; opacity: 0.9; }
+        .table-responsive { max-height: 600px; overflow-y: auto; }
+        .alerta-row { border-left: 5px solid #dc3545; background-color: #fff5f5; }
+        .alerta-row:hover { background-color: #ffe5e5; }
+        .img-thumbnail-pequena { width: 60px; height: 60px; object-fit: cover; cursor: pointer; border-radius: 6px; transition: 0.2s; }
+        .img-thumbnail-pequena:hover { transform: scale(1.1); }
+        .badge-custom { font-size: 0.75rem; padding: 6px 10px; border-radius: 20px; }
+        .filtros-section { background: white; padding: 20px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .no-data { text-align: center; padding: 40px; color: #999; }
+        .fecha-badge { background: #e9ecef; color: #495057; padding: 5px 10px; border-radius: 6px; font-size: 0.85rem; }
+    </style>
+</head>
+<body class="bg-light">
+
+<div class="container-fluid px-4 py-4">
+    <!-- HEADER -->
+    <div class="header-section d-flex justify-content-between align-items-center shadow">
+        <div>
+            <h2 class="mb-0">⚠️ Reportes de Calidad</h2>
+            <p class="mb-0 opacity-75">Alertas y novedades registradas en toda la línea de producción</p>
+        </div>
+        <div>
+            <a href="{{ url_for('seleccion_admin') }}" class="btn btn-outline-light fw-bold">← VOLVER</a>
+        </div>
+    </div>
+
+    <!-- FILTROS -->
+    <div class="filtros-section">
+        <form method="GET" class="row g-3 align-items-end">
+            <div class="col-md-2">
+                <label class="form-label fw-bold small">Fecha Inicio</label>
+                <input type="date" name="fecha_inicio" class="form-control" value="{{ fecha_inicio }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-bold small">Fecha Fin</label>
+                <input type="date" name="fecha_fin" class="form-control" value="{{ fecha_fin }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold small">Implemento</label>
+                <select name="implemento" class="form-select">
+                    <option value="">📦 Todos los implementos</option>
+                    {% for imp in implementos_disponibles %}
+                    <option value="{{ imp }}" {% if imp == implemento_sel %}selected{% endif %}>{{ imp }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold small">Sector</label>
+                <select name="sector" class="form-select">
+                    <option value="">🏭 Todos los sectores</option>
+                    {% for sec in sectores_disponibles %}
+                    <option value="{{ sec }}" {% if sec == sector_sel %}selected{% endif %}>{{ sec }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 text-end">
+                <button type="submit" class="btn btn-primary fw-bold w-100">🔍 FILTRAR</button>
+            </div>
+            <div class="col-md-2 text-end">
+                <a href="/admin/calidad" class="btn btn-outline-secondary fw-bold w-100">🔄 LIMPIAR</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- ESTADÍSTICAS -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-2">
+            <div class="stat-card">
+                <div class="stat-value">{{ total_alertas }}</div>
+                <div class="stat-label">Total de Alertas</div>
+            </div>
+        </div>
+        
+        {% for sector, cantidad in alertas_por_sector.items() %}
+        <div class="col-md-2">
+            <div class="stat-card warning">
+                <div class="stat-value">{{ cantidad }}</div>
+                <div class="stat-label">{{ sector }}</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- ALERTAS POR IMPLEMENTO -->
+    {% if alertas_por_implemento %}
+    <div class="card mb-4 p-4">
+        <h5 class="fw-bold mb-3">📊 Alertas por Implemento</h5>
+        <div class="row g-2">
+            {% for implemento, cantidad in alertas_por_implemento.items() %}
+            <div class="col-md-3">
+                <div class="card p-3 border border-warning">
+                    <strong>{{ implemento }}</strong>
+                    <div class="mt-2">
+                        <span class="badge bg-warning">{{ cantidad }} alerta{% if cantidad > 1 %}s{% endif %}</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- TABLA DE REPORTES -->
+    <div class="card shadow">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Fecha/Hora</th>
+                        <th>Chasis</th>
+                        <th>Implemento</th>
+                        <th>Sector</th>
+                        <th>Usuario</th>
+                        <th>Descripción</th>
+                        <th>Imagen</th>
+                        <th class="text-center">Detalles</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if alertas %}
+                        {% for alerta in alertas %}
+                        <tr class="alerta-row">
+                            <td>
+                                <span class="fecha-badge">
+                                    {{ alerta.fecha.strftime('%d/%m/%Y %H:%M') }}
+                                </span>
+                            </td>
+                            <td class="fw-bold text-primary">
+                                {{ alerta.plan.nro_chasis if alerta.plan else 'N/A' }}
+                            </td>
+                            <td>
+                                <small>{{ alerta.plan.implemento if alerta.plan else 'N/A' }}</small><br>
+                                <small class="text-muted">{{ alerta.plan.modelo if alerta.plan else '' }}</small>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ alerta.sector or 'Sin asignar' }}</span>
+                            </td>
+                            <td>
+                                <small class="badge-custom bg-light">{{ alerta.usuario }}</small>
+                            </td>
+                            <td>
+                                <small>{{ alerta.descripcion[:60] }}{% if alerta.descripcion|length > 60 %}...{% endif %}</small>
+                            </td>
+                            <td>
+                                {% if alerta.imagen %}
+                                    <img src="/static/uploads/{{ alerta.imagen }}" 
+                                         class="img-thumbnail-pequena" 
+                                         onclick="verImagenGrande('/static/uploads/{{ alerta.imagen }}')"
+                                         title="Click para ampliar">
+                                {% else %}
+                                    <small class="text-muted">Sin imagen</small>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-primary" 
+                                            type="button" 
+                                            onclick="verDetalles('{{ alerta.id }}', '{{ alerta.plan.nro_chasis if alerta.plan else 'N/A' }}', '{{ alerta.descripcion }}', '{{ alerta.usuario }}', '{{ alerta.fecha.strftime('%d/%m/%Y %H:%M') }}')">
+                                        👁️
+                                    </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="no-data">
+                            <h5>📭 Sin reportes de calidad</h5>
+                            <p>No hay alertas que coincidan con los filtros seleccionados</p>
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Imagen Grande -->
+<div class="modal fade" id="modalImagen" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5>Imagen Ampliada</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center p-0">
+                <img src="" id="imagenGrande" class="img-fluid" style="max-height: 600px;">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Detalles -->
+<div class="modal fade" id="modalDetalles" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5>Detalles del Reporte</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Chasis:</strong><br>
+                        <span id="detalle-chasis" class="text-primary fw-bold"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Usuario:</strong><br>
+                        <span id="detalle-usuario"></span>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <strong>Fecha/Hora:</strong><br>
+                        <span id="detalle-fecha" class="fecha-badge"></span>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <strong>Descripción:</strong><br>
+                        <p id="detalle-descripcion" class="form-control-plaintext" style="border: 1px solid #ddd; padding: 10px; border-radius: 6px; background: #f8f9fa;"></p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    function verImagenGrande(src) {
+        document.getElementById('imagenGrande').src = src;
+        new bootstrap.Modal(document.getElementById('modalImagen')).show();
+    }
+
+    function verDetalles(id, chasis, descripcion, usuario, fecha) {
+        document.getElementById('detalle-chasis').innerText = chasis;
+        document.getElementById('detalle-usuario').innerText = usuario;
+        document.getElementById('detalle-fecha').innerText = fecha;
+        document.getElementById('detalle-descripcion').innerText = descripcion;
+        new bootstrap.Modal(document.getElementById('modalDetalles')).show();
+    }
+</script>
+</body>
+</html>

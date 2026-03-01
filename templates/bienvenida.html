@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bienvenido - Ascanelli</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+  <link rel="shortcut icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+  <style>
+    :root {
+      --primary: #007bff;
+      --primary-dark: #0056b3;
+      --bg: #f8f9fa;
+      --accent: #212529;
+    }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html, body {
+      height: 100%;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      background: var(--bg);
+    }
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      width: 100%;
+      max-width: 500px;
+    }
+    .logo-header {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 20px;
+      background: url('{{ url_for("static", filename="logo.png") }}') center/contain no-repeat;
+    }
+    .welcome-card {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: white;
+      padding: 40px 30px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 86, 179, 0.3);
+      text-align: center;
+      animation: slideIn 0.5s ease-out;
+    }
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .welcome-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      display: block;
+    }
+    h1 {
+      font-size: 28px;
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+    .user-name {
+      font-size: 24px;
+      margin-bottom: 24px;
+      opacity: 0.95;
+      font-weight: 500;
+    }
+    .info-box {
+      background: rgba(255, 255, 255, 0.15);
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 24px;
+      backdrop-filter: blur(10px);
+    }
+    .info-label {
+      font-size: 12px;
+      opacity: 0.8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .info-value {
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .info-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .info-row:last-child {
+      margin-bottom: 0;
+    }
+    .btn-container {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      flex: 1;
+      min-width: 140px;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      text-align: center;
+      transition: all 0.3s ease;
+      white-space: nowrap;
+    }
+    .btn-continue {
+      background: white;
+      color: var(--primary);
+      flex: 2;
+    }
+    .btn-continue:hover {
+      background: #f0f0f0;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    .btn-logout {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      flex: 1;
+    }
+    .btn-logout:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+    .time {
+      font-size: 12px;
+      opacity: 0.7;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo-header"></div>
+    <div class="welcome-card">
+      <span class="welcome-icon">👋</span>
+      <h1>¡Bienvenido!</h1>
+      <div class="user-name">{{ usuario.nombre }}</div>
+
+      <div class="info-box">
+        <div class="info-row">
+          <div>
+            <div class="info-label">Sector</div>
+            <div class="info-value">{{ usuario.sector }}</div>
+          </div>
+          <div>
+            <div class="info-label">Rol</div>
+            <div class="info-value">{{ usuario.rol }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-container">
+        <a href="{{ url_for('seleccion_puesto') }}" class="btn btn-continue">Continuar</a>
+        <a href="{{ url_for('logout') }}" class="btn btn-logout">Salir</a>
+      </div>
+
+      <div class="time">
+        <span id="timestamp"></span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Mostrar hora actual
+    function actualizarHora() {
+      const now = new Date();
+      const hora = now.toLocaleTimeString('es-ES', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+      const fecha = now.toLocaleDateString('es-ES', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      document.getElementById('timestamp').textContent = 
+        `${hora} • ${fecha.charAt(0).toUpperCase() + fecha.slice(1)}`;
+    }
+    actualizarHora();
+    setInterval(actualizarHora, 1000);
+  </script>
+</body>
+</html>

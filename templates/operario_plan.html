@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Avance de Producción - Ascanelli</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <link rel="shortcut icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f4f7f6; }
+        .card { border-radius: 15px; border: none; }
+        .status-badge { font-size: 0.9rem; padding: 8px 12px; border-radius: 20px; }
+        .chasis-card { transition: transform 0.2s; border-left: 5px solid transparent; }
+        .chasis-card:hover { transform: scale(1.02); }
+        .border-pendiente { border-left-color: #ffc107; }
+        .border-cumplido { border-left-color: #198754; }
+        .header-info { background: #212529; color: white; border-radius: 0 0 20px 20px; }
+        .btn-avance { font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+        .btn-calidad { background-color: #FFD700; color: #000; font-weight: bold; border: none; }
+        .btn-calidad:hover { background-color: #e6c200; color: #000; }
+        .scroll-horizontal { display: flex; overflow-x: auto; gap: 15px; padding-bottom: 10px; }
+        .futuro-item { min-width: 150px; background: white; padding: 15px; border-radius: 12px; border-top: 4px solid #0d6efd; }
+    </style>
+</head>
+<body>
+
+<div class="header-info p-3 mb-4 shadow">
+    <div class="container d-flex justify-content-between align-items-center">
+        <div>
+            <h5 class="mb-0">Sector: <span class="text-warning">{{ sec }}</span></h5>
+            <small class="opacity-75">Puesto: {{ pue }}</small>
+        </div>
+        <div class="text-end">
+            <h5 class="mb-0">{{ hoy_str }}</h5>
+            <a href="/admin/seleccion_puesto" class="text-warning text-decoration-none small">← Volver</a>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    
+    {% if pasados %}
+    <div class="card shadow-sm mb-5">
+        <div class="card-header bg-danger text-white fw-bold">
+            ⚠️ PENDIENTES DE DÍAS ANTERIORES
+        </div>
+        <div class="card-body">
+            <div class="scroll-horizontal">
+                {% for c in pasados if c.estado != 'TERMINADO' %}
+                <div class="futuro-item shadow-sm" style="min-width: 220px; border-top: 4px solid #dc3545;">
+                    <span class="badge bg-danger mb-2 d-block">{{ c.fecha }}</span>
+                    
+                    <div class="bg-light p-2 rounded mb-2">
+                        <small class="d-block text-uppercase text-muted fw-bold" style="font-size: 0.65rem;">CHASIS</small>
+                        <small class="fw-bold" style="font-size: 1.1rem; color: #0066cc;">{{ c.nro_chasis }}</small>
+                    </div>
+                    
+                    <div class="bg-light p-2 rounded mb-2">
+                        <small class="d-block text-uppercase text-muted fw-bold" style="font-size: 0.65rem;">Modelo</small>
+                        <small class="fw-bold">{{ c.modelo }}</small>
+                    </div>
+                    
+                    <div class="bg-light p-2 rounded mb-3">
+                        <small class="d-block text-uppercase text-muted fw-bold" style="font-size: 0.65rem;">Implemento</small>
+                        <small class="fw-bold">{{ c.implemento }}</small>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button onclick="abrirModalCalidad('{{ c.id }}', '{{ c.nro_chasis }}')" class="btn btn-sm btn-warning">⚠️ CALIDAD</button>
+                        <button type="button" class="btn btn-sm btn-primary"
+                                onclick="abrirModalConfirmacion('{{ c.id }}', '{{ c.nro_chasis }}', '{{ c.modelo }}')">
+                            DAR AVANCE
+                        </button>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-muted w-100 text-center mb-0">No hay pendientes de días anteriores.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <h4 class="fw-bold mb-3">PLAN PARA HOY</h4>
+    <div class="row g-3 mb-5">
+        {% for c in actuales %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow-sm chasis-card {% if c.estado == 'TERMINADO' %}border-cumplido{% else %}border-pendiente{% endif %}">
+                <div class="card-body">
+                    <div class="d-flex justify-content-end mb-3">
+                        {% if c.estado == 'TERMINADO' %}
+                        <span class="badge bg-success status-badge">TERMINADO</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark status-badge">PENDIENTE</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="bg-light p-2 rounded mb-2">
+                        <small class="d-block text-uppercase text-muted fw-bold" style="font-size: 0.7rem;">Chasis</small>
+                        <span class="fw-bold text-primary">{{ c.nro_chasis }}</span>
+                    </div>
+
+                    <div class="bg-light p-2 rounded mb-2">
+                        <small class="d-block text-uppercase text-muted fw-bold" style="font-size: 0.7rem;">Modelo</small>
+                        <span class="fw-bold">{{ c.modelo }}</span>
+                    </div>
+
+                    <div class="bg-light p-2 rounded mb-3">
+                        <small class="d-block text-uppercase text-muted fw-bold" style="font-size: 0.7rem;">Implemento</small>
+                        <span class="fw-bold">{{ c.implemento }}</span>
+                    </div>
+
+                    {% if c.estado != 'TERMINADO' %}
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-primary btn-lg btn-avance py-3 shadow-sm" 
+                                onclick="abrirModalConfirmacion('{{ c.id }}', '{{ c.nro_chasis }}', '{{ c.modelo }}')">
+                             ✓ DAR AVANCE
+                        </button>
+                        <button onclick="abrirModalCalidad('{{ c.id }}', '{{ c.nro_chasis }}')" class="btn btn-calidad btn-lg py-2 shadow-sm">
+                            ⚠️ ALERTA DE CALIDAD
+                        </button>
+                    </div>
+                    {% else %}
+                    <button class="btn btn-outline-success w-100 py-3 fw-bold" disabled>
+                        ✓ COMPLETADO
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12">
+            <div class="alert alert-info text-center">No hay chasis programados para el día de hoy.</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="card shadow-sm mb-5">
+        <div class="card-header bg-dark text-white fw-bold">
+            🔮 PRÓXIMO DÍA HÁBIL
+        </div>
+        <div class="card-body">
+            <div class="scroll-horizontal">
+                {% for c in futuros %}
+                <div class="futuro-item shadow-sm" style="min-width: 220px;">
+                    <span class="badge bg-primary mb-2 d-block">{{ c.fecha }}</span>
+                    
+                    <div class="bg-light p-2 rounded mb-2">
+                        <small class="d-block text-uppercase text-muted fw-bold" style="font-size: 0.65rem;">CHASIS</small>
+                        <small class="fw-bold" style="font-size: 1.1rem; color: #0066cc;">{{ c.nro_chasis }}</small>
+                    </div>
+                    
+                    <div class="bg-light p-2 rounded mb-2">
+                        <small class="d-block text-uppercase text-muted fw-bold" style="font-size: 0.65rem;">Modelo</small>
+                        <small class="fw-bold">{{ c.modelo }}</small>
+                    </div>
+                    
+                    <div class="bg-light p-2 rounded mb-3">
+                        <small class="d-block text-uppercase text-muted fw-bold" style="font-size: 0.65rem;">Implemento</small>
+                        <small class="fw-bold">{{ c.implemento }}</small>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button onclick="abrirModalCalidad('{{ c.id }}', '{{ c.nro_chasis }}')" class="btn btn-sm btn-warning">⚠️ CALIDAD</button>
+                        <button type="button" class="btn btn-sm btn-primary"
+                                onclick="abrirModalConfirmacion('{{ c.id }}', '{{ c.nro_chasis }}', '{{ c.modelo }}')">
+                            DAR AVANCE
+                        </button>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-muted w-100 text-center mb-0">No hay chasis cargados para los próximos días.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Escaneo QR Obligatorio -->
+<div class="modal fade" id="modalQR" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold">📷 ESCANEAR CÓDIGO QR</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-info mb-4" role="alert">
+                    <strong>📱 Requisito obligatorio:</strong> Debe escanear el código QR de la planilla del chasis para poder continuar.
+                    <div class="mt-2">
+                        <small class="text-muted">Dispositivo detectado: <span id="tipoDispositivo" class="fw-bold"></span></small>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <strong class="d-block text-muted small text-uppercase">Nro. Chasis Requerido</strong>
+                        <span id="qrChasisRequerido" class="text-primary fw-bold" style="font-size: 1.3rem;"></span>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label for="qrInput" class="form-label fw-bold">
+                        🔍 Escanee o ingrese el código QR del chasis:
+                    </label>
+                    <div class="input-group">
+                        <input type="text" 
+                               class="form-control form-control-lg" 
+                               id="qrInput" 
+                               placeholder="Escanee QR con dispositivo o ingrese manualmente"
+                               autocomplete="off">
+                        <button class="btn btn-outline-secondary" type="button" onclick="limpiarQR()">
+                            🗑️ Limpiar
+                        </button>
+                    </div>
+                    <small class="text-muted">Use el escáner del dispositivo o ingrese el número de chasis manualmente.</small>
+                </div>
+                
+                <div id="qrValidacion" class="alert" style="display: none;"></div>
+                
+                <div class="alert alert-light border border-primary" role="alert">
+                    <small class="text-primary">
+                        <strong>ℹ️ Importante:</strong> El código QR debe corresponder exactamente al número de chasis asignado.
+                    </small>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">
+                    ✕ Cancelar
+                </button>
+                <button type="button" 
+                        class="btn btn-primary fw-bold px-5" 
+                        id="btnValidarQR"
+                        onclick="validarQR()">
+                    📷 VALIDAR QR
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Avance Bloqueado -->
+<div class="modal fade" id="modalBloqueado" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title fw-bold">⛔ AVANCE BLOQUEADO</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-danger mb-3" role="alert">
+                    <strong>⚠️ No se puede proceder con este avance</strong>
+                </div>
+                <p class="mb-3" id="mensajeBloqueado" style="font-size: 1.1rem; color: #333;"></p>
+                <div class="alert alert-light border border-danger" role="alert">
+                    <small class="text-danger"><strong>Requisito:</strong> Debe completar el puesto anterior antes de continuar.</small>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-danger fw-bold px-5" data-bs-dismiss="modal">
+                    ✕ CERRAR
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Confirmación Dar Avance -->
+<div class="modal fade" id="modalConfirmacion" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title fw-bold">✓ Confirmar Avance de Chasis</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-warning mb-4" role="alert">
+                    <strong>⚠️ Atención:</strong> Está a punto de marcar el chasis como terminado. Esta acción no se puede deshacer.
+                </div>
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <strong class="d-block text-muted small text-uppercase">Nro. Chasis</strong>
+                        <span id="confirmChasis" class="text-primary fw-bold" style="font-size: 1.3rem;"></span>
+                    </div>
+                </div>
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <strong class="d-block text-muted small text-uppercase">Modelo</strong>
+                        <span id="confirmModelo" class="text-dark fw-bold"></span>
+                    </div>
+                </div>
+                <div class="alert alert-info mb-0">
+                    <strong>¿Está seguro de que desea continuar?</strong>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">
+                    ✕ Cancelar
+                </button>
+                <a id="linkConfirmAvance" href="#" class="btn btn-success fw-bold px-5">
+                    ✓ SÍ, DAR AVANCE
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Calidad -->
+<div class="modal fade" id="modalCalidad" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form action="/operario/alerta_calidad" method="POST" enctype="multipart/form-data" class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold">⚠️ Alerta de Calidad: Chasis <span id="chasisDisplay"></span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" name="plan_id" id="planIdInput">
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Descripción de la Novedad</label>
+                    <textarea name="descripcion" class="form-control" rows="4" placeholder="Explique el problema detectado..." required></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Adjuntar Imagen / Tomar Foto</label>
+                    <input type="file" name="foto" class="form-control" accept="image/*" capture="environment">
+                    <small class="text-muted">Puede usar la cámara del dispositivo directamente.</small>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-warning fw-bold px-4">ENVIAR REPORTE</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const pSel = "{{ pue }}";
+    let planIdActual = null;
+    let nroChasisActual = null;
+    let modeloActual = null;
+    let qrValidado = false;
+
+    // Función para detectar si es un dispositivo móvil
+    function esMovil() {
+        // Opción forzada para pruebas: agregar ?force_mobile=true a la URL
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('force_mobile') === 'true') {
+            return true;
+        }
+        
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+               (window.innerWidth <= 768 && 'ontouchstart' in window);
+    }
+
+    function abrirModalConfirmacion(planId, nroChasis, modelo) {
+        // Guardar datos globales
+        planIdActual = planId;
+        nroChasisActual = nroChasis;
+        modeloActual = modelo;
+        qrValidado = false;
+        
+        // Validar si es posible dar avance
+        fetch('/operario/validar_avance/' + planId)
+            .then(response => response.json())
+            .then(data => {
+                if (!data.valido) {
+                    // Mostrar modal de bloqueo (fondo rojo)
+                    document.getElementById('mensajeBloqueado').innerText = data.mensaje;
+                    const modalBloqueado = new bootstrap.Modal(document.getElementById('modalBloqueado'));
+                    modalBloqueado.show();
+                    return;
+                }
+                
+                // Verificar si es dispositivo móvil
+                if (esMovil()) {
+                    // En móvil: mostrar modal de escaneo QR
+                    document.getElementById('qrChasisRequerido').innerText = nroChasis;
+                    document.getElementById('qrInput').value = '';
+                    document.getElementById('qrValidacion').style.display = 'none';
+                    document.getElementById('btnValidarQR').disabled = false;
+                    document.getElementById('tipoDispositivo').innerText = '📱 Móvil/Tablet';
+                    
+                    // Abrir el modal de QR
+                    const modalQR = new bootstrap.Modal(document.getElementById('modalQR'));
+                    modalQR.show();
+                    
+                    // Enfocar el input de QR
+                    setTimeout(() => {
+                        document.getElementById('qrInput').focus();
+                    }, 500);
+                } else {
+                    // En PC: ir directamente a confirmación sin QR
+                    document.getElementById('confirmChasis').innerText = nroChasis;
+                    document.getElementById('confirmModelo').innerText = modelo;
+                    document.getElementById('linkConfirmAvance').href = '/operario/dar_avance/' + planIdActual;
+                    
+                    const modalConfirmacion = new bootstrap.Modal(document.getElementById('modalConfirmacion'));
+                    modalConfirmacion.show();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('mensajeBloqueado').innerText = 'Error técnico: no se pudo validar el avance. Intente nuevamente.';
+                const modalBloqueado = new bootstrap.Modal(document.getElementById('modalBloqueado'));
+                modalBloqueado.show();
+            });
+    }
+
+    function validarQR() {
+        const qrInput = document.getElementById('qrInput');
+        const qrEscaneado = qrInput.value.trim();
+        const btnValidar = document.getElementById('btnValidarQR');
+        const divValidacion = document.getElementById('qrValidacion');
+        
+        if (!qrEscaneado) {
+            divValidacion.className = 'alert alert-danger';
+            divValidacion.innerHTML = '<strong>Error:</strong> Debe escanear o ingresar el código QR del chasis.';
+            divValidacion.style.display = 'block';
+            return;
+        }
+        
+        // Deshabilitar botón mientras se valida
+        btnValidar.disabled = true;
+        btnValidar.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Validando...';
+        
+        // Validar QR con el backend
+        fetch('/operario/validar_qr/' + planIdActual + '?qr_chasis=' + encodeURIComponent(qrEscaneado))
+            .then(response => response.json())
+            .then(data => {
+                if (data.valido) {
+                    // QR válido
+                    qrValidado = true;
+                    divValidacion.className = 'alert alert-success';
+                    divValidacion.innerHTML = '<strong>QR Validado:</strong> ' + data.mensaje;
+                    divValidacion.style.display = 'block';
+                    
+                    // Cerrar modal QR y abrir confirmación después de 1 segundo
+                    setTimeout(() => {
+                        const modalQR = bootstrap.Modal.getInstance(document.getElementById('modalQR'));
+                        modalQR.hide();
+                        
+                        // Abrir modal de confirmación
+                        document.getElementById('confirmChasis').innerText = nroChasisActual;
+                        document.getElementById('confirmModelo').innerText = modeloActual;
+                        document.getElementById('linkConfirmAvance').href = '/operario/dar_avance/' + planIdActual + '?qr_chasis=' + encodeURIComponent(qrEscaneado);
+                        
+                        const modalConfirmacion = new bootstrap.Modal(document.getElementById('modalConfirmacion'));
+                        modalConfirmacion.show();
+                    }, 1000);
+                } else {
+                    // QR inválido
+                    divValidacion.className = 'alert alert-danger';
+                    divValidacion.innerHTML = '<strong>QR Inválido:</strong> ' + data.mensaje;
+                    divValidacion.style.display = 'block';
+                    qrInput.focus();
+                    qrInput.select();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                divValidacion.className = 'alert alert-danger';
+                divValidacion.innerHTML = '<strong>Error técnico:</strong> No se pudo validar el QR. Intente nuevamente.';
+                divValidacion.style.display = 'block';
+            })
+            .finally(() => {
+                // Rehabilitar botón
+                btnValidar.disabled = false;
+                btnValidar.innerHTML = 'VALIDAR QR';
+            });
+    }
+
+    function limpiarQR() {
+        document.getElementById('qrInput').value = '';
+        document.getElementById('qrValidacion').style.display = 'none';
+        document.getElementById('qrInput').focus();
+    }
+
+    // Manejar Enter en el input de QR
+    document.addEventListener('DOMContentLoaded', function() {
+        const qrInput = document.getElementById('qrInput');
+        if (qrInput) {
+            qrInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    validarQR();
+                }
+            });
+        }
+    });
+
+    function abrirModalCalidad(planId, nroChasis) {
+        document.getElementById('planIdInput').value = planId;
+        document.getElementById('chasisDisplay').innerText = nroChasis;
+        
+        // Abrir el modal de calidad
+        const modalCalidad = new bootstrap.Modal(document.getElementById('modalCalidad'));
+        modalCalidad.show();
+    }
+</script>
+</body>
+</html>

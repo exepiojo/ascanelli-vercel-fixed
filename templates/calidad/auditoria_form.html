@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ejecutar Auditoría - Sistema de Gestión de Calidad</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .item-card {
+            transition: all 0.2s;
+        }
+        .item-card:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .respuesta-correcta {
+            border-left: 4px solid #28a745;
+        }
+        .respuesta-incorrecta {
+            border-left: 4px solid #dc3545;
+        }
+        .scoring-progress {
+            height: 8px;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('calidad_auditorias') }}">
+                <i class="fas fa-arrow-left me-2"></i>Ejecutar Auditoría
+            </a>
+            <div class="navbar-nav ms-auto">
+                <div class="nav-item">
+                    <span class="navbar-text">
+                        <i class="fas fa-user me-1"></i>{{ current_user.nombre }}
+                    </span>
+                </div>
+                <a href="{{ url_for('logout') }}" class="nav-link">
+                    <i class="fas fa-sign-out-alt"></i> Salir
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h4 class="mb-1">{{ template.nombre }}</h4>
+                                <p class="text-muted mb-2">{{ template.descripcion }}</p>
+                                <div class="d-flex gap-2">
+                                    <span class="badge bg-info">{{ template.tipo }}</span>
+                                    <span class="badge bg-secondary">{{ template.sector or 'General' }}</span>
+                                    <span class="badge bg-primary">{{ template.items|length }} items</span>
+                                </div>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <div class="mb-2">
+                                    <small class="text-muted">Auditor:</small>
+                                    <strong>{{ current_user.nombre }}</strong>
+                                </div>
+                                <div class="mb-2">
+                                    <small class="text-muted">Fecha:</small>
+                                    <strong>{{ moment().format('DD/MM/YYYY HH:mm') }}</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Formulario de Auditoría -->
+        <form method="POST" id="auditoriaForm">
+            <!-- Selección de Plan (si aplica) -->
+            {% if template.tipo == 'PROCESO' and planes %}
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">Plan de Producción Asociado</h6>
+                        </div>
+                        <div class="card-body">
+                            <select class="form-select" name="plan_id">
+                                <option value="">Sin plan específico</option>
+                                {% for plan in planes %}
+                                <option value="{{ plan.id }}">
+                                    {{ plan.nro_chasis }} - {{ plan.implemento }} {{ plan.modelo }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Items de la Auditoría -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0">Items de Verificación</h6>
+                            <div class="d-flex align-items-center gap-3">
+                                <small class="text-muted">Progreso:</small>
+                                <div class="progress" style="width: 200px; height: 8px;">
+                                    <div class="progress-bar" id="progresoBar" role="progressbar" style="width: 0%"></div>
+                                </div>
+                                <span id="progresoTexto">0%</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            {% for item in template.items %}
+                            <div class="item-card border rounded p-3 mb-3" data-item-id="{{ item.id }}">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <div class="d-flex align-items-start gap-3">
+                                            <span class="badge bg-secondary">{{ item.orden }}</span>
+                                            <div class="flex-grow-1">
+                                                <h6 class="mb-1">{{ item.descripcion }}</h6>
+                                                <div class="d-flex gap-2 mb-2">
+                                                    <span class="badge bg-info">{{ item.tipo_respuesta }}</span>
+                                                    {% if item.obligatorio %}
+                                                    <span class="badge bg-warning">Obligatorio</span>
+                                                    {% endif %}
+                                                    {% if item.puntos > 0 %}
+                                                    <span class="badge bg-success">{{ item.puntos }} pts</span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <!-- Respuesta según tipo -->
+                                        {% if item.tipo_respuesta == 'SI/NO' %}
+                                        <div class="btn-group w-100" role="group">
+                                            <input type="radio" class="btn-check" name="respuesta_{{ item.id }}" 
+                                                   id="si_{{ item.id }}" value="si" onchange="actualizarItem({{ item.id }})">
+                                            <label class="btn btn-outline-success" for="si_{{ item.id }}">
+                                                <i class="fas fa-check"></i> Sí
+                                            </label>
+                                            <input type="radio" class="btn-check" name="respuesta_{{ item.id }}" 
+                                                   id="no_{{ item.id }}" value="no" onchange="actualizarItem({{ item.id }})">
+                                            <label class="btn btn-outline-danger" for="no_{{ item.id }}">
+                                                <i class="fas fa-times"></i> No
+                                            </label>
+                                        </div>
+                                        {% elif item.tipo_respuesta == 'TEXTO' %}
+                                        <textarea class="form-control" name="respuesta_{{ item.id }}" 
+                                                  rows="2" placeholder="Ingrese su respuesta..."
+                                                  onchange="actualizarItem({{ item.id }})"></textarea>
+                                        {% elif item.tipo_respuesta == 'NUMERICO' %}
+                                        <input type="number" class="form-control" name="respuesta_{{ item.id }}" 
+                                               placeholder="Valor numérico..." step="0.01"
+                                               onchange="actualizarItem({{ item.id }})">
+                                        {% elif item.tipo_respuesta == 'FOTO' %}
+                                        <div class="mb-2">
+                                            <input type="file" class="form-control" name="evidencia_{{ item.id }}" 
+                                                   accept="image/*" onchange="actualizarItem({{ item.id }})">
+                                        </div>
+                                        {% endif %}
+
+                                        <!-- Observaciones -->
+                                        <div class="mt-2">
+                                            <textarea class="form-control form-control-sm" 
+                                                      name="obs_{{ item.id }}" rows="2"
+                                                      placeholder="Observaciones (opcional)..."
+                                                      onchange="actualizarItem({{ item.id }})"></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Observaciones Generales -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">Observaciones Generales</h6>
+                        </div>
+                        <div class="card-body">
+                            <textarea class="form-control" name="observaciones_generales" rows="4"
+                                      placeholder="Comentarios generales sobre la auditoría..."></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resumen y Botones -->
+            <div class="row mt-4">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-body">
+                            <h6 class="mb-3">Resumen de Auditoría</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <small class="text-muted">Items Respondidos:</small>
+                                    <h5 id="itemsRespondidos">0 / {{ template.items|length }}</h5>
+                                </div>
+                                <div class="col-md-4">
+                                    <small class="text-muted">Puntaje Actual:</small>
+                                    <h5 id="puntajeActual">0 / {{ template.items|sum(attribute='puntos') }}</h5>
+                                </div>
+                                <div class="col-md-4">
+                                    <small class="text-muted">Porcentaje:</small>
+                                    <h5 id="porcentajeActual">0%</h5>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex flex-column gap-2">
+                        <a href="{{ url_for('calidad_auditorias') }}" class="btn btn-secondary">
+                            <i class="fas fa-times me-1"></i>Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary" id="btnFinalizar">
+                            <i class="fas fa-save me-1"></i>Finalizar Auditoría
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Datos de los items
+        const itemsData = {
+            {% for item in template.items %}
+            {{ item.id }}: {
+                tipo: "{{ item.tipo_respuesta }}",
+                puntos: {{ item.puntos }},
+                obligatorio: {{ item.obligatorio|lower }}
+            }{% if not loop.last %},{% endif %}
+            {% endfor %}
+        };
+
+        let respuestas = {};
+        let totalItems = {{ template.items|length }};
+        let totalPuntos = {{ template.items|sum(attribute='puntos') }};
+
+        function actualizarItem(itemId) {
+            const item = itemsData[itemId];
+            const itemCard = document.querySelector(`[data-item-id="${itemId}"]`);
+            
+            let respuesta = null;
+            let cumple = true;
+
+            // Obtener respuesta según tipo
+            if (item.tipo === 'SI/NO') {
+                const siChecked = document.getElementById(`si_${itemId}`).checked;
+                const noChecked = document.getElementById(`no_${itemId}`).checked;
+                
+                if (siChecked) {
+                    respuesta = 'si';
+                    cumple = true;
+                } else if (noChecked) {
+                    respuesta = 'no';
+                    cumple = false;
+                }
+            } else if (item.tipo === 'TEXTO') {
+                const textarea = document.querySelector(`textarea[name="respuesta_${itemId}"]`);
+                respuesta = textarea.value.trim();
+                cumple = respuesta.length > 0;
+            } else if (item.tipo === 'NUMERICO') {
+                const input = document.querySelector(`input[name="respuesta_${itemId}"]`);
+                respuesta = input.value;
+                cumple = respuesta !== '';
+            } else if (item.tipo === 'FOTO') {
+                const fileInput = document.querySelector(`input[name="evidencia_${itemId}"]`);
+                respuesta = fileInput.files.length > 0;
+                cumple = respuesta;
+            }
+
+            // Guardar respuesta
+            respuestas[itemId] = {
+                respuesta: respuesta,
+                cumple: cumple,
+                puntos: cumple ? item.puntos : 0
+            };
+
+            // Actualizar estilo del card
+            itemCard.classList.remove('respuesta-correcta', 'respuesta-incorrecta');
+            if (respuesta !== null) {
+                if (cumple) {
+                    itemCard.classList.add('respuesta-correcta');
+                } else {
+                    itemCard.classList.add('respuesta-incorrecta');
+                }
+            }
+
+            actualizarResumen();
+        }
+
+        function actualizarResumen() {
+            const itemsRespondidos = Object.keys(respuestas).length;
+            const puntosObtenidos = Object.values(respuestas).reduce((sum, r) => sum + r.puntos, 0);
+            const porcentaje = totalPuntos > 0 ? (puntosObtenidos / totalPuntos * 100) : 0;
+
+            // Actualizar contadores
+            document.getElementById('itemsRespondidos').textContent = `${itemsRespondidos} / ${totalItems}`;
+            document.getElementById('puntajeActual').textContent = `${puntosObtenidos} / ${totalPuntos}`;
+            document.getElementById('porcentajeActual').textContent = `${porcentaje.toFixed(1)}%`;
+
+            // Actualizar barra de progreso
+            const progresoPorcentaje = (itemsRespondidos / totalItems) * 100;
+            document.getElementById('progresoBar').style.width = `${progresoPorcentaje}%`;
+            document.getElementById('progresoTexto').textContent = `${Math.round(progresoPorcentaje)}%`;
+
+            // Validar si se puede finalizar
+            const btnFinalizar = document.getElementById('btnFinalizar');
+            const itemsObligatorios = Object.entries(itemsData).filter(([id, item]) => item.obligatorio);
+            const obligatoriosRespondidos = itemsObligatorios.filter(([id, item]) => respuestas[id] && respuestas[id].respuesta !== null);
+
+            if (obligatoriosRespondidos.length < itemsObligatorios.length) {
+                btnFinalizar.disabled = true;
+                btnFinalizar.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>Complete items obligatorios';
+            } else {
+                btnFinalizar.disabled = false;
+                btnFinalizar.innerHTML = '<i class="fas fa-save me-1"></i>Finalizar Auditoría';
+            }
+        }
+
+        // Validación del formulario
+        document.getElementById('auditoriaForm').addEventListener('submit', function(e) {
+            const itemsObligatorios = Object.entries(itemsData).filter(([id, item]) => item.obligatorio);
+            const obligatoriosRespondidos = itemsObligatorios.filter(([id, item]) => respuestas[id] && respuestas[id].respuesta !== null);
+
+            if (obligatoriosRespondidos.length < itemsObligatorios.length) {
+                e.preventDefault();
+                alert('Debe responder todos los items obligatorios antes de finalizar la auditoría');
+                return;
+            }
+
+            // Confirmar finalización
+            if (!confirm('¿Está seguro de finalizar la auditoría? No podrá modificar las respuestas después.')) {
+                e.preventDefault();
+            }
+        });
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', function() {
+            actualizarResumen();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard - Ascanelli</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <link rel="shortcut icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .card { transition: transform 0.2s; }
+        .card:hover { transform: scale(1.02); }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-dark bg-dark mb-4">
+    <div class="container">
+        <span class="navbar-brand">ASCANELLI - Panel de Control</span>
+        <div class="d-flex">
+            <a href="/admin/plan" class="btn btn-outline-light btn-sm me-2">Gestionar Planes (CRUD)</a>
+            <a href="/logout" class="btn btn-danger btn-sm">Salir</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h2 class="fw-bold">Cumplimiento de Producción</h2>
+            <p class="text-muted">Estado actual de todos los puestos de trabajo</p>
+        </div>
+    </div>
+
+    <div class="row">
+        {% for p in resumen %}
+        <div class="col-md-4 mb-4">
+            <div class="card border-0 shadow-sm border-top border-{{ p.color }} border-4">
+                <div class="card-body text-center">
+                    <h5 class="text-muted text-uppercase small fw-bold">{{ p.nombre }}</h5>
+                    <h2 class="display-5 fw-bold text-{{ p.color }}">{{ p.porcentaje }}%</h2>
+                    
+                    <div class="progress my-3" style="height: 10px;">
+                        <div class="progress-bar bg-{{ p.color }}" role="progressbar" 
+                             style="width: {{ p.porcentaje }}%" 
+                             aria-valuenow="{{ p.porcentaje }}" aria-valuemin="0" aria-valuemax="100">
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mb-3">
+                        <span class="small">Progreso: <strong>{{ p.hechos }} / {{ p.total }}</strong></span>
+                        <span class="badge bg-{{ p.color }}">{{ p.estado }}</span>
+                    </div>
+
+                    <a href="/admin/plan?puesto={{ p.nombre }}" class="btn btn-light btn-sm w-100">Ver detalles</a>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12 text-center">
+            <div class="alert alert-info">No hay datos de producción cargados.</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

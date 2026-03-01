@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seleccionar Implemento - Gestión de Plan</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <link rel="shortcut icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f4f7f6; }
+        .header-section { background: #212529; color: white; padding: 25px; border-radius: 12px; margin-bottom: 25px; }
+        .implemento-card { 
+            transition: transform 0.2s, box-shadow 0.2s; 
+            border-radius: 12px; 
+            border: none; 
+            cursor: pointer;
+            height: 220px; /* Altura fija más compacta */
+        }
+        .implemento-card:hover { 
+            transform: translateY(-5px); 
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15); 
+        }
+        .implemento-icon { 
+            font-size: 1.8rem; 
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .implemento-image { 
+            width: 100%; 
+            height: 110px; 
+            object-fit: contain; /* Contain para que se vea completa */
+            border-radius: 8px; 
+            margin-bottom: 8px;
+        }
+        /* Forzar que 5 tarjetas estén en una fila */
+        @media (min-width: 768px) {
+            .col-md-2-4 {
+                flex: 0 0 auto;
+                width: 20%; /* 100% / 5 = 20% */
+            }
+        }
+        .mixer-badge { 
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); 
+            color: white; 
+            padding: 4px 12px; 
+            border-radius: 20px; 
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        .tolva-badge { 
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); 
+            color: white; 
+            padding: 4px 12px; 
+            border-radius: 20px; 
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        .embolsadora-badge { 
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); 
+            color: white; 
+            padding: 4px 12px; 
+            border-radius: 20px; 
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        .sembradora-badge { 
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); 
+            color: white; 
+            padding: 4px 12px; 
+            border-radius: 20px; 
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        .att-badge { 
+            background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%); 
+            color: white; 
+            padding: 4px 12px; 
+            border-radius: 20px; 
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid px-4 py-4">
+    <!-- HEADER -->
+    <div class="header-section d-flex justify-content-between align-items-center shadow">
+        <div>
+            <h2 class="mb-0">🔧 Gestión de Plan de Producción</h2>
+            <p class="mb-0 opacity-75">Seleccione el implemento que desea gestionar</p>
+        </div>
+        <div>
+            <a href="{{ url_for('admin_opciones_produccion') }}" class="btn btn-outline-light fw-bold">← VOLVER</a>
+        </div>
+    </div>
+
+    <!-- GRID DE IMPLEMENTOS -->
+    <div class="row g-4" id="implementosGrid">
+        {% for implemento in implementos %}
+        <div class="col-md-2-4 col-sm-6 implemento-item" data-implemento="{{ implemento.lower() }}">
+            <div class="card implemento-card shadow-sm" onclick="seleccionarImplemento('{{ implemento }}')">
+                <div class="card-body text-center p-2 d-flex flex-column">
+                    <!-- IMAGEN DEL IMPLEMENTO -->
+                    <div class="implemento-image-container flex-grow-1 d-flex align-items-center justify-content-center">
+                        {% if implemento == 'TOLVA' %}
+                        <img src="{{ url_for('static', filename='images/tolva.jpg') }}" alt="Tolva" class="implemento-image">
+                        {% elif implemento == 'MIXER' %}
+                        <img src="{{ url_for('static', filename='images/mixer_rs1600.jpg') }}" alt="Mixer RS 1600" class="implemento-image">
+                        {% elif implemento == 'EMBOLSADORA' %}
+                        <img src="{{ url_for('static', filename='images/embolsadora.jpg') }}" alt="Emboladora" class="implemento-image">
+                        {% elif implemento == 'ATT' %}
+                        <img src="{{ url_for('static', filename='images/att.jpg') }}" alt="ATT" class="implemento-image">
+                        {% elif implemento == 'SEMBRADORA' %}
+                        <img src="{{ url_for('static', filename='images/sembradora.jpg') }}" alt="Sembradora" class="implemento-image">
+                        {% else %}
+                        <div class="implemento-icon">
+                            🔧
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <h6 class="fw-bold mb-2">{{ implemento }}</h6>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12">
+            <div class="alert alert-info text-center">
+                <h5>📭 Sin implementos registrados</h5>
+                <p>No hay implementos cargados en el sistema. Primero cargue un archivo Excel con los datos de producción.</p>
+                <a href="{{ url_for('admin_opciones_produccion') }}" class="btn btn-primary mt-3">
+                    📤 Cargar Archivo Excel
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Función para seleccionar implemento
+    function seleccionarImplemento(implemento) {
+        window.location.href = `/admin/plan?implemento=${encodeURIComponent(implemento)}`;
+    }
+
+    // Navegación con teclado
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            window.location.href = '{{ url_for("admin_opciones_produccion") }}';
+        }
+    });
+</script>
+</body>
+</html>

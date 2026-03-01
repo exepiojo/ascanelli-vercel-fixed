@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notificaciones - Sistema de Gestión de Calidad</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .notif-card {
+            transition: transform 0.2s;
+            border-left: 4px solid;
+        }
+        .notif-card:hover {
+            transform: translateY(-2px);
+        }
+        .notif-urgente { border-left-color: #dc3545; }
+        .notif-alta { border-left-color: #fd7e14; }
+        .notif-media { border-left-color: #ffc107; }
+        .notif-baja { border-left-color: #28a745; }
+        .notif-info { border-left-color: #17a2b8; }
+        
+        .notif-leida {
+            opacity: 0.7;
+            background-color: #f8f9fa;
+        }
+        
+        .priority-badge {
+            font-size: 0.75rem;
+        }
+        
+        .notif-icon {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+        
+        .notif-time {
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('calidad_dashboard') }}">
+                <i class="fas fa-arrow-left me-2"></i>Notificaciones
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a href="{{ url_for('logout') }}" class="nav-link">
+                    <i class="fas fa-sign-out-alt"></i> Salir
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1 class="h3 mb-0">Centro de Notificaciones</h1>
+                        <p class="text-muted mb-0">Alertas y comunicaciones del sistema</p>
+                    </div>
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-outline-primary" onclick="marcarTodasLeidas()">
+                            <i class="fas fa-check-double me-1"></i>Marcar todas leídas
+                        </button>
+                        <button class="btn btn-outline-danger" onclick="eliminarLeidas()">
+                            <i class="fas fa-trash me-1"></i>Eliminar leídas
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Estadísticas -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h4 class="text-primary">{{ notificaciones|length }}</h4>
+                        <small class="text-muted">Total Notificaciones</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h4 class="text-danger">{{ notificaciones|selectattr('leida', 'equalto', False)|list|length }}</h4>
+                        <small class="text-muted">No Leídas</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h4 class="text-warning">{{ notificaciones|selectattr('prioridad', 'equalto', 'URGENTE')|list|length }}</h4>
+                        <small class="text-muted">Urgentes</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h4 class="text-info">{{ notificaciones|selectattr('leida', 'equalto', False)|selectattr('tipo', 'in', ['NC_CRITICA', 'KPI'])|list|length }}</h4>
+                        <small class="text-muted">Críticas</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <label class="form-label">Tipo</label>
+                                <select class="form-select" id="filtroTipo">
+                                    <option value="">Todos los tipos</option>
+                                    <option value="VENCIMIENTO">Vencimiento</option>
+                                    <option value="NC_CRITICA">NC Crítica</option>
+                                    <option value="NC">No Conformidad</option>
+                                    <option value="AUDITORIA">Auditoría</option>
+                                    <option value="DOCUMENTO">Documento</option>
+                                    <option value="KPI">KPI</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Prioridad</label>
+                                <select class="form-select" id="filtroPrioridad">
+                                    <option value="">Todas las prioridades</option>
+                                    <option value="URGENTE">Urgente</option>
+                                    <option value="ALTA">Alta</option>
+                                    <option value="MEDIA">Media</option>
+                                    <option value="BAJA">Baja</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Estado</label>
+                                <select class="form-select" id="filtroEstado">
+                                    <option value="">Todas</option>
+                                    <option value="no-leidas">No leídas</option>
+                                    <option value="leidas">Leídas</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Período</label>
+                                <select class="form-select" id="filtroPeriodo">
+                                    <option value="hoy">Hoy</option>
+                                    <option value="semana">Última semana</option>
+                                    <option value="mes">Último mes</option>
+                                    <option value="todos">Todas</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de Notificaciones -->
+        <div class="row">
+            {% if notificaciones %}
+                {% for notif in notificaciones %}
+                <div class="col-lg-6 mb-4 notif-item" 
+                     data-tipo="{{ notif.tipo }}" 
+                     data-prioridad="{{ notif.prioridad }}" 
+                     data-leida="{{ notif.leida|lower }}"
+                     data-fecha="{{ notif.fecha_envio.strftime('%Y-%m-%d') }}">
+                    <div class="card notif-card notif-{{ notif.prioridad.lower() }} h-100 {{ 'notif-leida' if notif.leida else '' }}">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start gap-3">
+                                <!-- Icono -->
+                                <div class="notif-icon bg-{{ 
+                                    'danger' if notif.prioridad == 'URGENTE' else 
+                                    'warning' if notif.prioridad == 'ALTA' else 
+                                    'info' if notif.prioridad == 'MEDIA' else 'success' 
+                                }} text-white">
+                                    {% if notif.tipo == 'NC_CRITICA' %}
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    {% elif notif.tipo == 'NC' %}
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    {% elif notif.tipo == 'AUDITORIA' %}
+                                    <i class="fas fa-clipboard-check"></i>
+                                    {% elif notif.tipo == 'DOCUMENTO' %}
+                                    <i class="fas fa-file-alt"></i>
+                                    {% elif notif.tipo == 'KPI' %}
+                                    <i class="fas fa-chart-line"></i>
+                                    {% elif notif.tipo == 'VENCIMIENTO' %}
+                                    <i class="fas fa-clock"></i>
+                                    {% else %}
+                                    <i class="fas fa-info-circle"></i>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Contenido -->
+                                <div class="flex-grow-1">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <div>
+                                            <h6 class="mb-1">{{ notif.titulo }}</h6>
+                                            <div class="d-flex gap-2 mb-1">
+                                                <span class="badge priority-badge bg-{{ 
+                                                    'danger' if notif.prioridad == 'URGENTE' else 
+                                                    'warning' if notif.prioridad == 'ALTA' else 
+                                                    'info' if notif.prioridad == 'MEDIA' else 'success' 
+                                                }}">{{ notif.prioridad }}</span>
+                                                <span class="badge bg-secondary">{{ notif.tipo }}</span>
+                                                {% if notif.leida %}
+                                                <span class="badge bg-light text-dark">Leída</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="text-end">
+                                            <small class="notif-time">{{ notif.fecha_envio.strftime('%d/%m %H:%M') }}</small>
+                                        </div>
+                                    </div>
+                                    
+                                    <p class="text-muted small mb-2">{{ notif.mensaje }}</p>
+                                    
+                                    {% if notif.destinatario %}
+                                    <div class="mb-2">
+                                        <small class="text-muted">Para:</small> {{ notif.destinatario }}
+                                    </div>
+                                    {% endif %}
+
+                                    <!-- Acciones -->
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        {% if notif.link_accion %}
+                                        <a href="{{ notif.link_accion }}" class="btn btn-primary btn-sm">
+                                            <i class="fas fa-external-link-alt me-1"></i>Ver Detalle
+                                        </a>
+                                        {% endif %}
+                                        
+                                        <div class="btn-group" role="group">
+                                            {% if not notif.leida %}
+                                            <a href="{{ url_for('calidad_notificacion_leer', id=notif.id) }}" 
+                                               class="btn btn-outline-success btn-sm">
+                                                <i class="fas fa-check"></i>
+                                            </a>
+                                            {% endif %}
+                                            <button class="btn btn-outline-secondary btn-sm" onclick="eliminarNotif({{ notif.id }})">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-12">
+                    <div class="text-center py-5">
+                        <i class="fas fa-bell fa-4x text-muted mb-3"></i>
+                        <h4>No hay notificaciones</h4>
+                        <p class="text-muted">No tienes notificaciones pendientes</p>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function marcarTodasLeidas() {
+            if (!confirm('¿Está seguro de marcar todas las notificaciones como leídas?')) {
+                return;
+            }
+            
+            // En producción, esto sería una llamada AJAX
+            const noLeidas = document.querySelectorAll('.notif-item[data-leida="false"]');
+            noLeidas.forEach(item => {
+                item.dataset.leida = 'true';
+                const card = item.querySelector('.notif-card');
+                card.classList.add('notif-leida');
+                
+                // Actualizar badge de leída
+                const existingBadge = card.querySelector('.badge.bg-light');
+                if (!existingBadge) {
+                    const header = card.querySelector('.d-flex.justify-content-between');
+                    const divs = header.querySelectorAll('div');
+                    divs[1].innerHTML += '<span class="badge bg-light text-dark ms-2">Leída</span>';
+                }
+            });
+            
+            // Actualizar contador
+            const totalBadge = document.querySelector('.text-danger h4');
+            if (totalBadge) {
+                totalBadge.textContent = '0';
+            }
+        }
+
+        function eliminarLeidas() {
+            if (!confirm('¿Está seguro de eliminar todas las notificaciones leídas?')) {
+                return;
+            }
+            
+            // En producción, esto sería una llamada AJAX
+            const leidas = document.querySelectorAll('.notif-item[data-leida="true"]');
+            leidas.forEach(item => {
+                item.remove();
+            });
+        }
+
+        function eliminarNotif(notifId) {
+            if (!confirm('¿Está seguro de eliminar esta notificación?')) {
+                return;
+            }
+            
+            // En producción, esto sería una llamada AJAX
+            const item = document.querySelector(`[onclick="eliminarNotif(${notifId})"]`).closest('.notif-item');
+            item.remove();
+        }
+
+        // Filtros
+        function aplicarFiltros() {
+            const tipo = document.getElementById('filtroTipo').value;
+            const prioridad = document.getElementById('filtroPrioridad').value;
+            const estado = document.getElementById('filtroEstado').value;
+            const periodo = document.getElementById('filtroPeriodo').value;
+            
+            const items = document.querySelectorAll('.notif-item');
+            const hoy = new Date();
+            
+            items.forEach(item => {
+                let mostrar = true;
+                const fecha = new Date(item.dataset.fecha);
+                
+                if (tipo && item.dataset.tipo !== tipo) mostrar = false;
+                if (prioridad && item.dataset.prioridad !== prioridad) mostrar = false;
+                if (estado === 'no-leidas' && item.dataset.leida === 'true') mostrar = false;
+                if (estado === 'leidas' && item.dataset.leida === 'false') mostrar = false;
+                
+                // Filtro por período
+                if (periodo === 'hoy') {
+                    if (fecha.toDateString() !== hoy.toDateString()) mostrar = false;
+                } else if (periodo === 'semana') {
+                    const semanaAtras = new Date(hoy.getTime() - 7 * 24 * 60 * 60 * 1000);
+                    if (fecha < semanaAtras) mostrar = false;
+                } else if (periodo === 'mes') {
+                    const mesAtras = new Date(hoy.getTime() - 30 * 24 * 60 * 60 * 1000);
+                    if (fecha < mesAtras) mostrar = false;
+                }
+                
+                item.style.display = mostrar ? 'block' : 'none';
+            });
+        }
+
+        // Event listeners para filtros
+        document.getElementById('filtroTipo').addEventListener('change', aplicarFiltros);
+        document.getElementById('filtroPrioridad').addEventListener('change', aplicarFiltros);
+        document.getElementById('filtroEstado').addEventListener('change', aplicarFiltros);
+        document.getElementById('filtroPeriodo').addEventListener('change', aplicarFiltros);
+
+        // Auto-refresh cada 30 segundos para nuevas notificaciones
+        setInterval(function() {
+            console.log('Verificando nuevas notificaciones...');
+            // Aquí podrías agregar una llamada AJAX para actualizar la lista
+        }, 30000);
+    </script>
+</body>
+</html>

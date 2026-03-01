@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuración General - ASCANELLI</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <link rel="shortcut icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #f4f7f6; }
+        .header-section { background: #212529; color: white; padding: 25px; border-radius: 12px; margin-bottom: 25px; }
+        .config-card { 
+            transition: transform 0.2s, box-shadow 0.2s; 
+            border-radius: 12px; 
+            border: none; 
+            cursor: pointer;
+            height: 100%;
+        }
+        .config-card:hover { 
+            transform: translateY(-5px); 
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15); 
+        }
+        .config-icon { 
+            font-size: 3rem; 
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .feriados-badge { 
+            background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%); 
+            color: white; 
+            padding: 4px 12px; 
+            border-radius: 20px; 
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        .usuarios-badge { 
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); 
+            color: white; 
+            padding: 4px 12px; 
+            border-radius: 20px; 
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid px-4 py-4">
+    <!-- HEADER -->
+    <div class="header-section d-flex justify-content-between align-items-center shadow">
+        <div>
+            <h2 class="mb-0">⚙️ Configuración General</h2>
+            <p class="mb-0 opacity-75">Configuraciones que aplican a todo el sistema</p>
+            <div class="mt-2">
+                <span class="badge bg-warning text-dark">
+                    <i class="fas fa-shield-alt me-1"></i>Solo Administradores
+                </span>
+            </div>
+        </div>
+        <div>
+            <a href="{{ url_for('seleccion_admin') }}" class="btn btn-outline-light fw-bold">← VOLVER</a>
+        </div>
+    </div>
+
+    <!-- GRID DE OPCIONES -->
+    <div class="row g-4">
+        <!-- FERIADOS -->
+        <div class="col-md-4">
+            <div class="card config-card shadow h-100" onclick="window.location.href='/admin/feriados'">
+                <div class="card-body text-center p-4">
+                    <div class="mb-3">
+                        <i class="fas fa-calendar-alt fa-3x text-primary"></i>
+                    </div>
+                    <h5 class="card-title">📅 Gestión de Feriados</h5>
+                    <p class="card-text text-muted">Configurar días no laborables para cálculos de producción</p>
+                    <div class="mt-auto">
+                        <span class="badge bg-light text-dark">Configuración Global</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- USUARIOS -->
+        <div class="col-md-4">
+            <div class="card config-card shadow h-100" onclick="toggleUsuariosSection()">
+                <div class="card-body text-center p-4">
+                    <div class="mb-3">
+                        <i class="fas fa-users fa-3x text-success"></i>
+                    </div>
+                    <h5 class="card-title">👥 Gestión de Usuarios</h5>
+                    <p class="card-text text-muted">Administrar usuarios y permisos del sistema</p>
+                    <div class="mt-auto">
+                        <span class="badge bg-warning text-dark">
+                            <i class="fas fa-shield-alt me-1"></i>Acceso Restringido
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- AUDITORÍA -->
+        <div class="col-md-4">
+            <div class="card config-card shadow h-100" onclick="window.location.href='/admin/auditoria'">
+                <div class="card-body text-center p-4">
+                    <div class="mb-3">
+                        <i class="fas fa-history fa-3x text-warning"></i>
+                    </div>
+                    <h5 class="card-title">📋 Historial de Cambios</h5>
+                    <p class="card-text text-muted">Ver auditoría y registro de todas las modificaciones</p>
+                    <div class="mt-auto">
+                        <span class="badge bg-info text-dark">
+                            <i class="fas fa-eye me-1"></i>Traza Completa
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECCIÓN DE GESTIÓN DE USUARIOS (OCULTA POR DEFECTO) -->
+    <div class="card shadow mt-4" id="usuariosSection" style="display: none;">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">👥 Gestión de Usuarios</h5>
+            <small class="opacity-75">
+                <i class="fas fa-lock me-1"></i>
+                Funcionalidad exclusiva para administradores del sistema
+            </small>
+        </div>
+        <div class="card-body">
+            <!-- Alerta informativa de seguridad -->
+            <div class="alert alert-warning d-flex align-items-center" role="alert">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <div>
+                    <strong>Acceso Restringido:</strong> Esta funcionalidad está disponible únicamente para usuarios con rol ADMIN.
+                    Los operarios y otros roles no pueden acceder a la gestión de usuarios.
+                </div>
+            </div>
+            
+            <!-- Botón Agregar Usuario -->
+            <div class="mb-3">
+                <div class="d-flex align-items-center mb-2">
+                    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalUsuario">
+                        <i class="fas fa-plus"></i> Agregar Nuevo Usuario
+                    </button>
+                    <span class="ms-2 badge bg-info">
+                        <i class="fas fa-info-circle me-1"></i>Solo ADMIN
+                    </span>
+                </div>
+                <small class="text-muted">
+                    <i class="fas fa-shield-alt me-1"></i>
+                    Como administrador, puedes crear, modificar y eliminar usuarios del sistema.
+                </small>
+            </div>
+
+            <!-- Tabla de Usuarios -->
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>PIN</th>
+                            <th>Nombre</th>
+                            <th>Sector</th>
+                            <th>Rol</th>
+                            <th class="text-center">Acciones 
+                            <small class="d-block text-muted fw-normal">
+                                <i class="fas fa-lock me-1"></i>Solo ADMIN
+                            </small>
+                        </th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaUsuarios">
+                        {% for usuario in usuarios %}
+                        <tr data-id="{{ usuario.id }}">
+                            <td class="fw-bold">{{ usuario.pin }}</td>
+                            <td>{{ usuario.nombre }}</td>
+                            <td><span class="badge bg-info">{{ usuario.sector }}</span></td>
+                            <td><span class="badge bg-{{ 'primary' if usuario.rol == 'ADMIN' else 'secondary' }}">{{ usuario.rol }}</span></td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-primary me-1" 
+                                        onclick="editarUsuario({{ usuario.id }})"
+                                        data-bs-toggle="tooltip" 
+                                        data-bs-placement="top" 
+                                        title="Editar usuario">
+                                    <i class="fas fa-edit"></i>
+                                    <span class="d-none d-md-inline ms-1">Editar</span>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" 
+                                        onclick="eliminarUsuario({{ usuario.id }}, '{{ usuario.nombre }}')"
+                                        data-bs-toggle="tooltip" 
+                                        data-bs-placement="top" 
+                                        title="Eliminar usuario">
+                                    <i class="fas fa-trash"></i>
+                                    <span class="d-none d-md-inline ms-1">Eliminar</span>
+                                </button>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center py-4 text-muted">No hay usuarios registrados.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- INFORMACIÓN ADICIONAL -->
+    <div class="card mt-5 shadow">
+        <div class="card-header bg-light">
+            <h6 class="mb-0">📋 Información del Sistema</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <h6 class="text-primary">Configuraciones Globales</h6>
+                    <p class="text-muted small">Estas configuraciones afectan a todos los implementos y procesos del sistema.</p>
+                </div>
+                <div class="col-md-4">
+                    <h6 class="text-success">Impacto en Producción</h6>
+                    <p class="text-muted small">Los cambios aquí realizados se reflejan inmediatamente en todos los planes de producción.</p>
+                </div>
+                <div class="col-md-4">
+                    <h6 class="text-warning">
+                        <i class="fas fa-shield-alt me-1"></i>Acceso Restringido
+                    </h6>
+                    <p class="text-muted small">
+                        <strong>Solo usuarios ADMIN</strong> pueden modificar configuraciones y gestionar usuarios. 
+                        Los operarios tienen acceso limitado a operaciones de producción.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- TOAST PARA MENSAJES -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+    <div id="toastExito" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header bg-success text-white">
+            <i class="fas fa-check-circle me-2"></i>
+            <strong class="me-auto">Éxito</strong>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" id="toastMensaje">
+            Usuario guardado correctamente
+        </div>
+    </div>
+    
+    <div id="toastError" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header bg-danger text-white">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong class="me-auto">Error</strong>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" id="toastErrorMensaje">
+            Ocurrió un error
+        </div>
+    </div>
+</div>
+
+<!-- MODAL PARA AGREGAR/EDITAR USUARIO -->
+<div class="modal fade" id="modalUsuario" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <form id="formUsuario" class="modal-content" action="/admin/agregar_usuario" method="POST">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="tituloModalUsuario">Agregar Nuevo Usuario</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="alert alert-info alert-sm m-0 rounded-0" role="alert">
+                <small><i class="fas fa-info-circle me-1"></i>Como administrador, estás creando un nuevo usuario con acceso al sistema.</small>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="usuarioId" name="id">
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold">PIN de Acceso (4 dígitos)</label>
+                    <input type="text" id="pinInput" name="pin" class="form-control" 
+                           maxlength="4" pattern="[0-9]{4}" required 
+                           placeholder="Ej: 1234">
+                    <div class="form-text">Debe ser un número de 4 dígitos único</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Nombre Completo</label>
+                    <input type="text" id="nombreInput" name="nombre" class="form-control" 
+                           required placeholder="Ej: Juan Pérez">
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Sector</label>
+                    <select id="sectorInput" name="sector" class="form-select" required>
+                        <option value="">Seleccionar sector...</option>
+                        <option value="SOLDADURA">SOLDADURA</option>
+                        <option value="PINTURA">PINTURA</option>
+                        <option value="MONTAJE">MONTAJE</option>
+                        <option value="CALIDAD">CALIDAD</option>
+                        <option value="ADMIN">ADMIN</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Rol</label>
+                    <select id="rolInput" name="rol" class="form-select" required>
+                        <option value="OPERARIO">OPERARIO</option>
+                        <option value="ADMIN">ADMIN</option>
+                        <option value="CALIDAD">CALIDAD</option>
+                        <option value="SUPERVISOR">SUPERVISOR</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary" id="btnGuardarUsuario">Guardar Usuario</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous"></script>
+<script>
+// Variables globales
+let editMode = false;
+
+// Funciones para mostrar toasts
+function mostrarToastExito(mensaje) {
+    document.getElementById('toastMensaje').textContent = mensaje;
+    const toast = new bootstrap.Toast(document.getElementById('toastExito'));
+    toast.show();
+}
+
+function mostrarToastError(mensaje) {
+    document.getElementById('toastErrorMensaje').textContent = mensaje;
+    const toast = new bootstrap.Toast(document.getElementById('toastError'));
+    toast.show();
+}
+
+// Event listener para el modal
+document.addEventListener('DOMContentLoaded', function() {
+    const modalUsuario = document.getElementById('modalUsuario');
+    
+    // Inicializar todos los tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+    
+    // Cuando se abre el modal, verificar si es modo agregar o edición
+    modalUsuario.addEventListener('show.bs.modal', function (event) {
+        const button = event.relatedTarget;
+        
+        // Si el botón no tiene data-user-id, es modo agregar
+        if (!button.hasAttribute('data-user-id')) {
+            agregarUsuario();
+        }
+    });
+});
+
+// Toggle sección de usuarios
+function toggleUsuariosSection() {
+    const section = document.getElementById('usuariosSection');
+    const btn = document.getElementById('usuariosBtn');
+    
+    if (section.style.display === 'none') {
+        section.style.display = 'block';
+        btn.textContent = 'Ocultar Usuarios';
+    } else {
+        section.style.display = 'none';
+        btn.textContent = 'Administrar Usuarios';
+    }
+}
+
+// Agregar usuario
+function agregarUsuario() {
+    editMode = false;
+    document.getElementById('tituloModalUsuario').textContent = 'Agregar Nuevo Usuario';
+    document.getElementById('formUsuario').reset();
+    document.getElementById('usuarioId').value = '';
+    document.getElementById('btnGuardarUsuario').textContent = 'Guardar Usuario';
+    
+    // Resetear acción del formulario a agregar
+    document.getElementById('formUsuario').action = '/admin/agregar_usuario';
+    document.getElementById('formUsuario').method = 'POST';
+    
+    // Limpiar mensajes de validación del PIN
+    const pinInput = document.getElementById('pinInput');
+    pinInput.style.borderColor = '';
+    const formText = pinInput.nextElementSibling;
+    if (formText && formText.classList.contains('form-text')) {
+        formText.remove();
+    }
+}
+
+// Editar usuario
+function editarUsuario(id) {
+    editMode = true;
+    
+    // Obtener datos del usuario desde la tabla
+    const fila = document.querySelector(`tr[data-id="${id}"]`);
+    const pin = fila.cells[0].textContent.trim();
+    const nombre = fila.cells[1].textContent.trim();
+    const sector = fila.cells[2].textContent.trim();
+    const rol = fila.cells[3].textContent.trim();
+    
+    // Llenar el formulario
+    document.getElementById('tituloModalUsuario').textContent = 'Editar Usuario';
+    document.getElementById('usuarioId').value = id;
+    document.getElementById('pinInput').value = pin;
+    document.getElementById('nombreInput').value = nombre;
+    document.getElementById('sectorInput').value = sector;
+    document.getElementById('rolInput').value = rol;
+    document.getElementById('btnGuardarUsuario').textContent = 'Actualizar Usuario';
+    
+    // Establecer acción del formulario
+    document.getElementById('formUsuario').action = `/admin/editar_usuario/${id}`;
+    document.getElementById('formUsuario').method = 'POST';
+    
+    // Mostrar modal
+    const modal = new bootstrap.Modal(document.getElementById('modalUsuario'));
+    modal.show();
+}
+
+// Eliminar usuario
+function eliminarUsuario(id, nombre) {
+    if (confirm(`¿Estás seguro de eliminar al usuario "${nombre}"? Esta acción no se puede deshacer.`)) {
+        fetch(`/admin/eliminar_usuario/${id}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Eliminar la fila de la tabla
+                const fila = document.querySelector(`tr[data-id="${id}"]`);
+                fila.remove();
+                
+                // Mostrar mensaje de éxito con toast
+                mostrarToastExito('Usuario eliminado correctamente');
+                
+                // Si no hay más usuarios, mostrar mensaje
+                const tbody = document.getElementById('tablaUsuarios');
+                if (tbody.children.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">No hay usuarios registrados.</td></tr>';
+                }
+            } else {
+                mostrarToastError('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarToastError('Error al eliminar el usuario');
+        });
+    }
+}
+
+// Manejar envío del formulario
+document.getElementById('formUsuario').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // Validación básica del formulario
+    const pin = document.getElementById('pinInput').value.trim();
+    const nombre = document.getElementById('nombreInput').value.trim();
+    const sector = document.getElementById('sectorInput').value;
+    const rol = document.getElementById('rolInput').value;
+    
+    // Validar que todos los campos estén completos
+    if (!pin || !nombre || !sector || !rol) {
+        mostrarToastError('Por favor, complete todos los campos');
+        return;
+    }
+    
+    // Validar que el PIN tenga 4 dígitos
+    if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+        mostrarToastError('El PIN debe tener exactamente 4 dígitos numéricos');
+        return;
+    }
+    
+    // Verificar que el PIN no exista en la tabla actual (solo en modo edición)
+    if (!editMode) {
+        const pinesExistentes = Array.from(document.querySelectorAll('#tablaUsuarios tr[data-id]')).map(tr => tr.cells[0].textContent.trim());
+        if (pinesExistentes.includes(pin)) {
+            mostrarToastError('El PIN ya existe. Por favor, elija otro PIN.');
+            return;
+        }
+    }
+    
+    const formData = new FormData(this);
+    const url = this.action;
+    
+    fetch(url, {
+        method: 'POST',
+        body: formData
+    })
+    .then(async response => {
+        // Verificar si la respuesta es JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            // Si no es JSON, probablemente es una redirección o error de autenticación
+            const text = await response.text();
+            console.error('Respuesta no JSON:', text);
+            throw new Error('Error de autenticación o permisos insuficientes');
+        }
+        
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.error || 'Error en el servidor');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Cerrar modal
+            bootstrap.Modal.getInstance(document.getElementById('modalUsuario')).hide();
+            
+            // Mostrar mensaje de éxito con toast verde
+            mostrarToastExito(data.message || 'Usuario guardado correctamente');
+            
+            // Recargar página para mostrar cambios después de un breve delay
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            mostrarToastError(data.error || 'Error desconocido');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarToastError(error.message || 'Error al guardar el usuario');
+    });
+});
+
+// Validar PIN (solo números y verificación en tiempo real)
+document.getElementById('pinInput').addEventListener('input', function(e) {
+    this.value = this.value.replace(/[^0-9]/g, '');
+    
+    // Verificar si el PIN ya existe cuando tenga 4 dígitos
+    if (this.value.length === 4) {
+        verificarPinDisponible(this.value);
+    }
+});
+
+// Función para verificar si un PIN está disponible
+async function verificarPinDisponible(pin) {
+    try {
+        const response = await fetch(`/admin/verificar_pin/${pin}`);
+        
+        // Verificar si la respuesta es JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            // Si no es JSON, probablemente es una redirección o error de autenticación
+            console.error('Respuesta no JSON:', await response.text());
+            const pinInput = document.getElementById('pinInput');
+            pinInput.style.borderColor = '#dc3545';
+            const formText = pinInput.nextElementSibling;
+            if (formText && formText.classList.contains('form-text')) {
+                formText.style.color = '#dc3545';
+                formText.textContent = 'Error de autenticación';
+            }
+            return;
+        }
+        
+        const data = await response.json();
+        
+        const pinInput = document.getElementById('pinInput');
+        const formText = pinInput.nextElementSibling;
+        
+        if (!data.valido) {
+            // PIN no disponible
+            pinInput.style.borderColor = '#dc3545';
+            if (formText && formText.classList.contains('form-text')) {
+                formText.style.color = '#dc3545';
+                formText.textContent = data.error;
+            } else {
+                const newFormText = document.createElement('div');
+                newFormText.className = 'form-text';
+                newFormText.style.color = '#dc3545';
+                newFormText.textContent = data.error;
+                pinInput.parentNode.insertBefore(newFormText, pinInput.nextSibling);
+            }
+        } else {
+            // PIN disponible
+            pinInput.style.borderColor = '#28a745';
+            const formText = pinInput.nextElementSibling;
+            if (formText && formText.classList.contains('form-text')) {
+                formText.style.color = '#28a745';
+                formText.textContent = 'PIN disponible';
+            } else {
+                const newFormText = document.createElement('div');
+                newFormText.className = 'form-text';
+                newFormText.style.color = '#28a745';
+                newFormText.textContent = 'PIN disponible';
+                pinInput.parentNode.insertBefore(newFormText, pinInput.nextSibling);
+            }
+        }
+    } catch (error) {
+        console.error('Error verificando PIN:', error);
+        const pinInput = document.getElementById('pinInput');
+        pinInput.style.borderColor = '#ffc107';
+        const formText = pinInput.nextElementSibling;
+        if (formText && formText.classList.contains('form-text')) {
+            formText.style.color = '#ffc107';
+            formText.textContent = 'No se puede verificar el PIN';
+        } else {
+            const newFormText = document.createElement('div');
+            newFormText.className = 'form-text';
+            newFormText.style.color = '#ffc107';
+            newFormText.textContent = 'No se puede verificar el PIN';
+            pinInput.parentNode.insertBefore(newFormText, pinInput.nextSibling);
+        }
+    }
+}
+</script>
+</body>
+</html>

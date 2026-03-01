@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medir KPI - Sistema de Gestión de Calidad</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('calidad_kpis') }}">
+                <i class="fas fa-arrow-left me-2"></i>Medir KPI
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a href="{{ url_for('logout') }}" class="nav-link">
+                    <i class="fas fa-sign-out-alt"></i> Salir
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Registrar Medición de KPI</h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Información del KPI -->
+                        <div class="card bg-light mb-4">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <h6 class="mb-1">{{ kpi.codigo }} - {{ kpi.nombre }}</h6>
+                                        <p class="text-muted mb-2">{{ kpi.descripcion }}</p>
+                                        <div class="d-flex gap-2">
+                                            <span class="badge bg-primary">{{ kpi.categoria }}</span>
+                                            <span class="badge bg-secondary">{{ kpi.frecuencia }}</span>
+                                            <span class="badge bg-info">{{ kpi.unidad }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 text-end">
+                                        <div class="mb-2">
+                                            <small class="text-muted">Objetivo:</small><br>
+                                            <strong>{{ kpi.objetivo }} {{ kpi.unidad }}</strong>
+                                        </div>
+                                        <div class="mb-2">
+                                            <small class="text-muted">Mínimo aceptable:</small><br>
+                                            <strong>{{ kpi.minimo_aceptable }} {{ kpi.unidad }}</strong>
+                                        </div>
+                                        <div class="mb-2">
+                                            <small class="text-muted">Responsable:</small><br>
+                                            <strong>{{ kpi.responsable }}</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <form method="POST" id="medicionForm">
+                            <!-- Datos de la Medición -->
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label">Valor Actual *</label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" name="valor" required 
+                                               step="0.01" placeholder="0.00"
+                                               oninput="calcularCumplimiento()">
+                                        <span class="input-group-text">{{ kpi.unidad }}</span>
+                                    </div>
+                                    <small class="text-muted">Ingrese el valor medido actual</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Período *</label>
+                                    <input type="text" class="form-control" name="periodo" required 
+                                           value="{{ moment().format('YYYY-MM') }}" readonly>
+                                    <small class="text-muted">Período de medición</small>
+                                </div>
+                            </div>
+
+                            <!-- Resultado del Cumplimiento -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <div class="card" id="resultadoCard" style="display: none;">
+                                        <div class="card-body text-center">
+                                            <h6 class="mb-3">Resultado de Cumplimiento</h6>
+                                            <div class="row">
+                                                <div class="col-md-4">
+                                                    <div class="valor-actual" id="valorActual">-</div>
+                                                    <small class="text-muted">Valor Medido</small>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="valor-objetivo" id="valorObjetivo">{{ kpi.objetivo }} {{ kpi.unidad }}</div>
+                                                    <small class="text-muted">Objetivo</small>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div id="cumpleBadge">
+                                                        <!-- Badge dinámico -->
+                                                    </div>
+                                                    <small class="text-muted">Cumplimiento</small>
+                                                </div>
+                                            </div>
+                                            <div class="mt-3">
+                                                <div class="progress" style="height: 10px;">
+                                                    <div class="progress-bar" id="progresoBar" role="progressbar" style="width: 0%"></div>
+                                                </div>
+                                                <small id="porcentajeTexto" class="text-muted">0% del objetivo</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Información Adicional -->
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label">Fuente de Datos</label>
+                                    <select class="form-select" name="fuente">
+                                        <option value="">Seleccionar fuente</option>
+                                        <option value="PRODUCCION">Producción</option>
+                                        <option value="CALIDAD">Calidad</option>
+                                        <option value="RECURSOS_HUMANOS">Recursos Humanos</option>
+                                        <option value="MANTENIMIENTO">Mantenimiento</option>
+                                        <option value="VENTAS">Ventas</option>
+                                        <option value="OTRO">Otro</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Registrado por</label>
+                                    <input type="text" class="form-control" name="registrado_por" 
+                                           value="{{ current_user.nombre }}" readonly>
+                                </div>
+                            </div>
+
+                            <!-- Comentarios -->
+                            <div class="mb-4">
+                                <label class="form-label">Comentarios y Observaciones</label>
+                                <textarea class="form-control" name="comentarios" rows="4"
+                                          placeholder="Ingrese comentarios sobre la medición, causas, tendencias, etc..."></textarea>
+                                <small class="text-muted">Describe cualquier situación relevante que afecte este resultado</small>
+                            </div>
+
+                            <!-- Alertas (si aplica) -->
+                            <div id="alertaSection" style="display: none;">
+                                <div class="alert alert-warning">
+                                    <h6 class="alert-heading">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>Alerta de Desempeño
+                                    </h6>
+                                    <p class="mb-0" id="alertaMensaje">
+                                        <!-- Mensaje dinámico -->
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- Botones -->
+                            <div class="d-flex justify-content-between">
+                                <a href="{{ url_for('calidad_kpis') }}" class="btn btn-secondary">
+                                    <i class="fas fa-times me-1"></i>Cancelar
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-1"></i>Registrar Medición
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const objetivo = {{ kpi.objetivo }};
+        const minimoAceptable = {{ kpi.minimo_aceptable }};
+        const unidad = "{{ kpi.unidad }}";
+
+        function calcularCumplimiento() {
+            const valorInput = document.querySelector('input[name="valor"]');
+            const valor = parseFloat(valorInput.value);
+            
+            if (isNaN(valor)) {
+                document.getElementById('resultadoCard').style.display = 'none';
+                document.getElementById('alertaSection').style.display = 'none';
+                return;
+            }
+
+            // Mostrar tarjeta de resultado
+            document.getElementById('resultadoCard').style.display = 'block';
+            
+            // Actualizar valor actual
+            document.getElementById('valorActual').textContent = `${valor} ${unidad}`;
+            
+            // Calcular porcentaje
+            const porcentaje = (valor / objetivo) * 100;
+            document.getElementById('progresoBar').style.width = `${Math.min(porcentaje, 100)}%`;
+            document.getElementById('porcentajeTexto').textContent = `${porcentaje.toFixed(1)}% del objetivo`;
+            
+            // Determinar cumplimiento
+            const cumple = valor >= objetivo;
+            const aceptable = valor >= minimoAceptable;
+            
+            const cumpleBadge = document.getElementById('cumpleBadge');
+            const alertaSection = document.getElementById('alertaSection');
+            const alertaMensaje = document.getElementById('alertaMensaje');
+            
+            if (cumple) {
+                cumpleBadge.innerHTML = '<span class="badge bg-success fs-6">CUMPLE</span>';
+                alertaSection.style.display = 'none';
+            } else if (aceptable) {
+                cumpleBadge.innerHTML = '<span class="badge bg-warning fs-6">ACEPTABLE</span>';
+                alertaSection.style.display = 'block';
+                alertaMensaje.textContent = `El valor está por debajo del objetivo (${objetivo} ${unidad}) pero por encima del mínimo aceptable (${minimoAceptable} ${unidad}). Se recomienda monitorear la tendencia.`;
+            } else {
+                cumpleBadge.innerHTML = '<span class="badge bg-danger fs-6">NO CUMPLE</span>';
+                alertaSection.style.display = 'block';
+                alertaMensaje.textContent = `El valor está por debajo del mínimo aceptable (${minimoAceptable} ${unidad}). Se requieren acciones correctivas inmediatas.`;
+            }
+
+            // Actualizar color de la barra de progreso
+            const progressBar = document.getElementById('progresoBar');
+            progressBar.className = 'progress-bar';
+            if (cumple) {
+                progressBar.classList.add('bg-success');
+            } else if (aceptable) {
+                progressBar.classList.add('bg-warning');
+            } else {
+                progressBar.classList.add('bg-danger');
+            }
+        }
+
+        // Validación del formulario
+        document.getElementById('medicionForm').addEventListener('submit', function(e) {
+            const valor = parseFloat(document.querySelector('input[name="valor"]').value);
+            const periodo = document.querySelector('input[name="periodo"]').value;
+            const fuente = document.querySelector('select[name="fuente"]').value;
+            
+            if (isNaN(valor)) {
+                e.preventDefault();
+                alert('Ingrese un valor válido');
+                return;
+            }
+            
+            if (!fuente) {
+                e.preventDefault();
+                alert('Seleccione la fuente de datos');
+                return;
+            }
+            
+            // Confirmación según resultado
+            let mensaje = '¿Está seguro de registrar esta medición?';
+            const cumple = valor >= objetivo;
+            const aceptable = valor >= minimoAceptable;
+            
+            if (!aceptable) {
+                mensaje += '\n\n⚠️ El valor está por debajo del mínimo aceptable. Se generarán notificaciones automáticas.';
+            } else if (!cumple) {
+                mensaje += '\n\n⚠️ El valor está por debajo del objetivo.';
+            }
+            
+            if (!confirm(mensaje)) {
+                e.preventDefault();
+            }
+        });
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', function() {
+            // Establecer período actual
+            const hoy = new Date();
+            const periodo = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
+            document.querySelector('input[name="periodo"]').value = periodo;
+        });
+    </script>
+</body>
+</html>

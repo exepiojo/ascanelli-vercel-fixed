@@ -1,0 +1,2305 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() if csrf_token else '' }}">
+    <title>Planilla de Producción - {{ implemento }} - Ascanelli</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- CSRF Token para JavaScript -->
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            overflow-x: hidden;
+        }
+        
+        .header-production {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            padding: 20px 0;
+            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+            width: 100%;
+            overflow-x: hidden;
+        }
+        
+        .breadcrumb-custom {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 10px 20px;
+            margin-bottom: 30px;
+        }
+        
+        .breadcrumb-custom a {
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+        }
+        
+        .breadcrumb-custom a:hover {
+            color: white;
+        }
+        
+        .breadcrumb-custom .active {
+            color: white;
+            font-weight: 600;
+        }
+        
+        .planilla-table {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            overflow: hidden;
+            width: 100%;
+            max-width: 100vw;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .table thead th {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            border: none;
+            font-weight: 600;
+            padding: 15px 10px;
+            font-size: 0.9rem;
+        }
+        
+        .table tbody td {
+            padding: 12px 10px;
+            vertical-align: middle;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .chasis-number {
+            font-weight: 700;
+            color: #007bff;
+            font-size: 1.1rem;
+        }
+        
+        .estado-badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .estado-pendiente { background: #ffc107; color: #000; }
+        .estado-en-progreso { background: #17a2b8; color: white; }
+        .estado-terminado { background: #28a745; color: white; }
+        .estado-cancelado { background: #dc3545; color: white; }
+        
+        .action-buttons {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 1000;
+        }
+        
+        .btn-float {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-float:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 123, 255, 0.4);
+        }
+        
+        /* Contenedor externo para scroll vertical */
+        .external-scroll-container {
+            position: relative;
+            height: calc(100vh - 150px); /* Reducido de 200px a 150px (+50px más espacio) */
+            overflow: auto;
+            border-radius: 10px;
+            border: 1px solid #dee2e6;
+        }
+        
+        /* Estilos para columnas inmovilizadas */
+        .table-responsive-wrapper {
+            position: relative;
+            overflow: hidden;
+            border-radius: 10px;
+            width: 100%;
+            max-width: 100vw;
+            margin: 0;
+        }
+        
+        .table-container {
+            display: flex;
+            min-width: 0;
+            width: 100%;
+            max-width: 100vw;
+        }
+        
+        .table-fixed {
+            flex: 0 0 auto;
+            position: sticky;
+            left: 0;
+            z-index: 10;
+            background: white;
+            border-right: 2px solid #dee2e6;
+        }
+        
+        .table-scrollable {
+            flex: 1;
+            overflow-x: auto;
+            min-width: 0;
+            width: 100%;
+        }
+        
+        .table-scrollable table {
+            width: 100%;
+            min-width: 1400px; /* Aumentar de 1200px a 1400px para nombres completos */
+        }
+        
+        .table-fixed th,
+        .table-fixed td {
+            min-width: 100px; /* Aumentado de 80px a 100px para LANZAMIENTO */
+            max-width: 120px; /* Agregar max-width */
+            border-right: none;
+            padding: 3px 2px; /* Igual que scrollables */
+            vertical-align: middle;
+            height: 30px; /* Asegurar misma altura que scrollables */
+            line-height: 30px; /* Forzar altura de línea */
+        }
+        
+        /* Ajustes específicos para columnas fijas - alinear con encabezados */
+        .table-fixed th:nth-child(1),
+        .table-fixed td:nth-child(1) {
+            width: 10px !important;
+            min-width: 10px !important;
+            max-width: 10px !important;
+            padding: 0px !important;
+        }
+        
+        .table-fixed th:nth-child(2),
+        .table-fixed td:nth-child(2) {
+            width: 100px !important; /* Aumentado de 80px a 100px (+20px) */
+            min-width: 100px !important;
+            max-width: 100px !important;
+            font-size: 12px; /* Aumentado de 10px a 12px (+2px) */
+            text-align: center; /* Centrar encabezado y datos */
+        }
+        
+        .table-fixed th:nth-child(3),
+        .table-fixed td:nth-child(3) {
+            width: 85px !important; /* Aumentado de 51px a 85px para legibilidad */
+            min-width: 85px !important;
+            max-width: 85px !important;
+        }
+        
+        .table-fixed th:nth-child(4),
+        .table-fixed td:nth-child(4) {
+            min-width: 60px; /* Aumentar ancho de MODELO 50% */
+            max-width: 60px;
+            width: 60px;
+        }
+        
+        .table-scrollable th,
+        .table-scrollable td {
+            border-left: none;
+            padding: 3px 2px; /* Mantener consistencia con fijos */
+            vertical-align: middle;
+            height: 30px; /* Reducir de 45px a 30px */
+            line-height: 30px; /* Forzar altura de línea */
+            text-align: center;
+            font-size: 11px;
+            min-width: 45px; /* Aumentar para nombres completos */
+        }
+        
+        /* Encabezados más pequeños - sin saltos de línea */
+        .table-scrollable th {
+            font-size: 8px; /* Aumentar de 7px a 8px para mejor legibilidad */
+            font-weight: 600;
+            white-space: nowrap; /* Evitar saltos de línea */
+            overflow: hidden; /* Ocultar texto que no cabe */
+            text-overflow: ellipsis; /* Puntos suspensivos si no cabe */
+            padding: 3px 2px; /* Igual que fijos */
+            line-height: 30px; /* Forzar altura de línea igual a fijos */
+        }
+        
+        /* Columnas de producción (con círculos) - tamaño fijo ultra pequeño */
+        .table-scrollable th.puesto-produccion,
+        .table-scrollable td.puesto-produccion {
+            width: 35px;
+            min-width: 35px;
+            max-width: 35px;
+        }
+        
+        /* Columnas M1-M5 - ancho aumentado 2px */
+        .table-scrollable th.puesto-produccion:nth-child(19),
+        .table-scrollable th.puesto-produccion:nth-child(20),
+        .table-scrollable th.puesto-produccion:nth-child(21),
+        .table-scrollable th.puesto-produccion:nth-child(22),
+        .table-scrollable th.puesto-produccion:nth-child(23),
+        .table-scrollable td.puesto-produccion:nth-child(19),
+        .table-scrollable td.puesto-produccion:nth-child(20),
+        .table-scrollable td.puesto-produccion:nth-child(21),
+        .table-scrollable td.puesto-produccion:nth-child(22),
+        .table-scrollable td.puesto-produccion:nth-child(23) {
+            width: 37px;
+            min-width: 37px;
+            max-width: 37px;
+        }
+        
+        /* Columnas M4-M5 - ancho 42px */
+        .table-scrollable th.puesto-produccion:nth-child(24),
+        .table-scrollable th.puesto-produccion:nth-child(25),
+        .table-scrollable td.puesto-produccion:nth-child(24),
+        .table-scrollable td.puesto-produccion:nth-child(25) {
+            width: 42px;
+            min-width: 42px;
+            max-width: 42px;
+        }
+        
+        /* Columnas de datos (texto) - ultra simple */
+        .table-scrollable td.dato-texto {
+            font-size: 12px;
+            font-weight: 600;
+            text-align: left;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding: 4px 2px;
+        }
+        
+        .table-scrollable th:first-child,
+        .table-scrollable td:first-child {
+            border-left: 1px solid #dee2e6;
+        }
+        
+        /* Botones de control fijos sobre la tabla */
+        .table-controls {
+            position: sticky;
+            top: 0;
+            background: white;
+            padding: 10px 0;
+            z-index: 100;
+            border-bottom: 2px solid #dee2e6;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .table-controls .btn {
+            font-size: 12px;
+            padding: 6px 12px;
+        }
+        
+        .table-controls .badge {
+            font-size: 11px;
+            padding: 6px 10px;
+        }
+        
+        /* Columnas OBSERVACIONES con texto multilínea */
+        .caracteristica:has([data-observaciones]),
+        .entrega:has([data-observaciones]) {
+            max-width: 320px !important;
+            min-width: 280px !important;
+            width: 320px !important;
+        }
+        
+        .caracteristica:has([data-observaciones]) div,
+        .entrega:has([data-observaciones]) div {
+            white-space: normal !important;
+            word-wrap: break-word !important;
+            overflow-wrap: break-word !important;
+            hyphens: auto !important;
+            text-align: left !important;
+            padding: 2px !important;
+            line-height: 1.2 !important;
+            height: 32px !important; /* Forzar altura fija */
+            max-height: 32px !important; /* Forzar altura máxima */
+            overflow-y: auto !important;
+            box-sizing: border-box !important;
+        }
+        
+        /* Primera columna (checkbox) ultra estrecha */
+        .table-fixed th:nth-child(1),
+        .table-fixed td:nth-child(1) {
+            min-width: 25px !important;
+            max-width: 25px !important;
+            width: 25px !important;
+            padding: 2px !important;
+        }
+        
+        /* Todos los datos centrados en la celda */
+        .table-scrollable td,
+        .table-fixed td {
+            text-align: center !important;
+            vertical-align: middle;
+        }
+        
+        /* Círculos de estado para puestos de producción - ultra simple */
+        .estado-circle {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: inline-block;
+            margin: 0 auto;
+            cursor: default;
+            transition: all 0.2s ease;
+        }
+        
+        .estado-circle.clickable-circle {
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        
+        .estado-circle.clickable-circle:hover {
+            transform: scale(1.2);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            border: 2px solid #007bff;
+        }
+        
+        .estado-circle.cumplido {
+            background: #28a745;
+            border: 2px solid #1e7e34;
+        }
+        
+        .estado-circle.pendiente {
+            background: #dc3545;
+            border: 2px solid #bd2130;
+        }
+        
+        .estado-circle.en-progreso {
+            background: #ffc107;
+            border: 2px solid #e0a800;
+        }
+        
+        .table-fixed tr,
+        .table-scrollable tr {
+            height: 30px; /* Reducir de 45px a 30px (33% menor) */
+        }
+        
+        .table-fixed tr:hover,
+        .table-scrollable tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        /* Scrollbar personalizado */
+        .table-scrollable::-webkit-scrollbar {
+            height: 8px;
+        }
+        
+        .table-scrollable::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        
+        .table-scrollable::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        
+        .table-scrollable::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        
+        /* Sincronización de alturas de fila */
+        .table-fixed th,
+        .table-scrollable th {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            border: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        /* Encabezados de columnas fijas (primeras 4) - Color 1 */
+        .table-fixed th {
+            z-index: 30;
+            background: linear-gradient(135deg, #6f42c1 0%, #5a32a3 100%) !important; /* Morado */
+        }
+        
+        /* Encabezados de CLIENTE a OBSERVACIONES - Color 2 */
+        .table-scrollable th.caracteristica {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%) !important; /* Azul */
+        }
+        
+        /* Encabezados de P1 a M5 - Color 3 */
+        .table-scrollable th.puesto-produccion {
+            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%) !important; /* Verde */
+        }
+        
+        /* Encabezados de M5 en adelante - Color 4 */
+        .table-scrollable th.entrega {
+            background: linear-gradient(135deg, #fd7e14 0%, #dc6502 100%) !important; /* Naranja */
+        }
+        
+        /* Asegurar que las filas estén alineadas */
+        .table-fixed thead tr,
+        .table-scrollable thead tr {
+            display: table-row;
+            height: 40px; /* Altura fija para ambas tablas */
+            min-height: 40px;
+            max-height: 40px;
+        }
+        
+        .table-fixed thead tr th,
+        .table-scrollable thead tr th {
+            display: table-cell;
+            vertical-align: middle;
+            padding: 4px 6px; /* Ajustar padding */
+            height: 40px; /* Altura fija para ambas tablas */
+            min-height: 40px;
+            max-height: 40px;
+            line-height: 32px; /* Altura de línea ajustada */
+            white-space: nowrap; /* Evitar saltos de línea */
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .table-fixed tbody tr,
+        .table-scrollable tbody tr {
+            display: table-row;
+            height: 40px; /* Altura fija para ambas tablas */
+            min-height: 40px;
+            max-height: 40px;
+        }
+        
+        .table-fixed tbody tr td,
+        .table-scrollable tbody tr td {
+            display: table-cell;
+            vertical-align: middle;
+            padding: 4px 6px; /* Ajustar padding */
+            height: 40px; /* Altura fija para ambas tablas */
+            min-height: 40px;
+            max-height: 40px;
+            line-height: 32px; /* Altura de línea ajustada */
+            white-space: nowrap; /* Evitar saltos de línea */
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        /* Asegurar que los círculos de estado estén centrados */
+        .estado-circle {
+            display: inline-block;
+            margin: 0 auto;
+        }
+        
+        /* Scroll Superior Sincronizado - Simplificado */
+        .scroll-top-wrapper {
+            width: 100%;
+            margin-bottom: 0;
+        }
+        
+        .scroll-top {
+            width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            height: 20px;
+            background: #f8f9fa;
+        }
+        
+        .scroll-content {
+            width: 1400px; /* Aumentar de 1200px a 1400px */
+            height: 1px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #6c757d;
+        }
+        
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            color: #dee2e6;
+        }
+        
+        .empty-state h3 {
+            color: #495057;
+            margin-bottom: 1rem;
+        }
+        
+        .stats-icon {
+            font-size: 2rem;
+            margin-right: 10px;
+        }
+        
+        .stats-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #007bff;
+        }
+        
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+        
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header-production">
+        <div class="container-fluid" style="padding: 0 15px;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h2 mb-2">
+                        <span class="implemento-icon">🚛</span>
+                        Planilla de Producción - {{ implemento }}
+                    </h1>
+                </div>
+                <div>
+                    <a href="{{ url_for('planilla_produccion_seleccion') }}" class="btn btn-outline-light btn-lg">
+                        <i class="fas fa-arrow-left me-2"></i>
+                        Volver a Selección
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Breadcrumb -->
+            <nav aria-label="breadcrumb" class="breadcrumb-custom">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('seleccion_admin') }}">
+                            <i class="fas fa-home me-1"></i> Panel Admin
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('admin_opciones_produccion') }}">
+                            <i class="fas fa-industry me-1"></i> Producción
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('planilla_produccion_seleccion') }}">
+                            <i class="fas fa-clipboard-list me-1"></i> Planilla de Producción
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item active" aria-current="page">
+                        <i class="fas fa-clipboard-list me-1"></i> {{ implemento }}
+                    </li>
+                </ol>
+            </nav>
+            
+            <!-- Botones de Acción -->
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <div class="d-flex flex-wrap gap-2">
+                    <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#agregarFilaModal" title="Agregar fila manual">
+                        <i class="fas fa-plus me-2"></i>
+                        Agregar Fila Manual
+                    </button>
+                    <button class="btn btn-warning btn-sm" onclick="editarSeleccionados()" title="Editar seleccionado" id="btnEditarSeleccionado" disabled>
+                        <i class="fas fa-edit me-2"></i>
+                        Editar Fila
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="eliminarSeleccionados()" title="Eliminar seleccionados" id="btnEliminarSeleccionados" disabled>
+                        <i class="fas fa-trash me-2"></i>
+                        Eliminar Seleccionados
+                    </button>
+                    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#importarExcelModal">
+                        <i class="fas fa-file-excel me-2"></i>
+                        Importar Excel
+                    </button>
+                    <button class="btn btn-success btn-sm" id="toggleAvances" title="Mostrar/Ocultar Avances">
+                        <i class="fas fa-tasks me-2"></i>
+                        AVANCES
+                    </button>
+                    <span class="badge bg-info align-self-center">
+                        <i class="fas fa-info-circle me-1"></i>
+                        <span id="contadorSeleccionados">0</span> seleccionados
+                    </span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Contenido Principal -->
+    <div class="container-fluid my-2" style="padding: 0 15px;">
+        <!-- Búsqueda Simple - Fijo sobre la tabla -->
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="fas fa-search"></i>
+                    </span>
+                    <input type="text" class="form-control" id="busquedaGlobal" placeholder="Buscar en todas las columnas..." onkeyup="realizarBusquedaGlobal()">
+                    <button class="btn btn-outline-secondary" type="button" onclick="limpiarBusquedaGlobal()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla de Planilla Horizontal con Columnas Exactas -->
+        <div class="planilla-table" style="margin: 0; padding: 0; width: 100%;">
+            {% if planilla_datos %}
+            <!-- Scroll Superior Sincronizado -->
+            <div class="scroll-top-wrapper">
+                <div class="scroll-top" id="scrollTop">
+                    <div class="scroll-content"></div>
+                </div>
+            </div>
+            
+            <!-- Contenedor Externo con Scroll Vertical -->
+            <div class="external-scroll-container">
+                <div class="table-responsive-wrapper">
+                <!-- Tabla con columnas inmovilizadas -->
+                <div class="table-container">
+                    <div class="table-fixed">
+                        <table class="table table-fixed">
+                            <thead>
+                                <tr>
+                                    <th style="width: 10px; text-align: center; padding: 0px;"></th>
+                                    <th style="font-size: 10px; font-weight: 600;">LANZAMIENTO</th>
+                                    <th style="font-size: 11px; font-weight: 600; width: 49px; min-width: 49px; text-align: center;">N° CHASIS</th>
+                                    <th style="font-size: 11px; font-weight: 600;">MODELO</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Las filas se renderizan desde JavaScript para mantener sincronización -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Tabla con scroll horizontal -->
+                    <div class="table-scrollable" id="tableScrollable">
+                        <table class="table table-bordered table-striped table-hover mb-0" style="font-size: 12px; width: 100%; min-width: 1200px;">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th class="caracteristica">CLIENTE</th>
+                                    <th class="caracteristica">TUBO</th>
+                                    <th class="caracteristica">ENCAMISADO</th>
+                                    <th class="caracteristica" style="min-width: 60px; max-width: 60px; width: 60px; font-size: 12px; line-height: 1.0; padding: 2px 1px;">
+                                    <div style="text-align: center; height: 25px; display: flex; flex-direction: column; justify-content: center;">
+                                        <div style="font-size: 12px; font-weight: 600;">TIPO</div>
+                                        <div style="font-size: 12px; font-weight: 600;">TUBO</div>
+                                    </div>
+                                </th>
+                                    <th class="caracteristica" style="min-width: 80px; max-width: 80px; width: 80px; font-size: 12px; line-height: 1.0; padding: 2px 1px;">
+                                    <div style="text-align: center; height: 25px; display: flex; flex-direction: column; justify-content: center;">
+                                        <div style="font-size: 12px; font-weight: 600;">TAMAÑO</div>
+                                        <div style="font-size: 12px; font-weight: 600;">CUBIERTA</div>
+                                    </div>
+                                </th>
+                                    <th class="caracteristica" style="min-width: 80px; max-width: 80px; width: 80px; font-size: 12px; line-height: 1.0; padding: 2px 1px;">
+                                    <div style="text-align: center; height: 25px; display: flex; flex-direction: column; justify-content: center;">
+                                        <div style="font-size: 12px; font-weight: 600;">MARCA</div>
+                                        <div style="font-size: 12px; font-weight: 600;">CUBIERTAS</div>
+                                    </div>
+                                </th>
+                                    <th class="caracteristica">COLOR</th>
+                                    <th class="caracteristica">BALANZA</th>
+                                    <th class="caracteristica">OBSERVACIONES</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">P1</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">P2</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">P3</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">P4</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">P5</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">P7</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">P8</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">P9</th>
+                                    <th class="puesto-produccion" style="font-size: 9px; writing-mode: vertical-rl; text-orientation: mixed; height: 30px; padding: 2px 1px;">LAVADO</th>
+                                    <th class="puesto-produccion" style="font-size: 9px; writing-mode: vertical-rl; text-orientation: mixed; height: 30px; padding: 2px 1px;">PINTURA</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">M1</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">M2</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">M3</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">M4</th>
+                                    <th class="puesto-produccion" style="font-size: 11px;">M5</th>
+                                    <th class="entrega">ENTREGADA</th>
+                                    <th class="entrega">FECHA ENTREGA</th>
+                                    <th class="entrega">PEDIDO</th>
+                                    <th class="entrega">LIBERADA VENTAS</th>
+                                    <th class="entrega">LLANTAS OK</th>
+                                    <th class="entrega">CUBIERTAS OK</th>
+                                    <th class="entrega">OBSERVACIÓN 2</th>
+                                    <th class="entrega">PROVEEDOR DE SIN FIN</th>
+                                    <th class="entrega">DIAS EN CONSIGNACIÓN</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Los datos se renderizan desde JavaScript para mantener sincronización -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            </div>
+            <!-- Contenedor de Paginación -->
+            <div class="card-footer bg-light" id="paginacionInfo">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span>Cargando...</span>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary" disabled>
+                            <i class="fas fa-chevron-left"></i> Anterior
+                        </button>
+                        <span class="mx-2">Página 1 de 1</span>
+                        <button class="btn btn-sm btn-outline-primary" disabled>
+                            Siguiente <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-clipboard-list"></i>
+                <h3>No hay chasis registrados</h3>
+                <p class="text-muted">No se encontraron chasis para el implemento {{ implemento }}</p>
+                <a href="{{ url_for('admin_plan') }}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>
+                    Agregar Chasis
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    
+    <!-- Modal para Agregar Fila Manual -->
+    <div class="modal fade" id="agregarFilaModal" tabindex="-1" aria-labelledby="agregarFilaModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="agregarFilaModalLabel">
+                        <i class="fas fa-plus me-2"></i>
+                        Agregar Nueva Fila Manualmente
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formAgregarFila">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="nro_chasis_manual" class="form-label">
+                                        <i class="fas fa-hashtag me-1"></i>N° CHASIS *
+                                    </label>
+                                    <input type="text" class="form-control" id="nro_chasis_manual" required 
+                                           placeholder="Ingrese el número de chasis">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="modelo_manual" class="form-label">
+                                        <i class="fas fa-cogs me-1"></i>MODELO
+                                    </label>
+                                    <input type="text" class="form-control" id="modelo_manual" 
+                                           placeholder="Modelo del chasis">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="lanzamiento_manual" class="form-label">
+                                        <i class="fas fa-calendar me-1"></i>LANZAMIENTO
+                                    </label>
+                                    <input type="text" class="form-control" id="lanzamiento_manual" 
+                                           placeholder="Texto libre de lanzamiento">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="cliente_manual" class="form-label">
+                                        <i class="fas fa-user me-1"></i>CLIENTE
+                                    </label>
+                                    <input type="text" class="form-control" id="cliente_manual">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="tubo_manual" class="form-label">
+                                        <i class="fas fa-cog me-1"></i>TUBO
+                                    </label>
+                                    <input type="text" class="form-control" id="tubo_manual">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="color_manual" class="form-label">
+                                        <i class="fas fa-palette me-1"></i>COLOR
+                                    </label>
+                                    <input type="text" class="form-control" id="color_manual">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="balanza_manual" class="form-label">
+                                        <i class="fas fa-weight me-1"></i>BALANZA
+                                    </label>
+                                    <input type="text" class="form-control" id="balanza_manual">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="observaciones_manual" class="form-label">
+                                <i class="fas fa-comment me-1"></i>OBSERVACIONES
+                            </label>
+                            <textarea class="form-control" id="observaciones_manual" rows="2"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn btn-success" onclick="agregarFilaManual()">
+                        <i class="fas fa-save me-2"></i>
+                        Guardar Fila
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Editar Fila -->
+    <div class="modal fade" id="editarFilaModal" tabindex="-1" aria-labelledby="editarFilaModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-white">
+                    <h5 class="modal-title" id="editarFilaModalLabel">
+                        <i class="fas fa-edit me-2"></i>
+                        Editar Fila Seleccionada
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formEditarFila">
+                        <input type="hidden" id="editarFilaId">
+                        
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="editarLanzamiento" class="form-label">LANZAMIENTO</label>
+                                    <input type="text" class="form-control" id="editarLanzamiento" readonly style="background-color: #f8f9fa; cursor: not-allowed;">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="editarNroChasis" class="form-label">N° CHASIS</label>
+                                    <input type="text" class="form-control" id="editarNroChasis" readonly style="background-color: #f8f9fa; cursor: not-allowed;">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="editarModelo" class="form-label">MODELO</label>
+                                    <input type="text" class="form-control" id="editarModelo" readonly style="background-color: #f8f9fa; cursor: not-allowed;">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="editarCliente" class="form-label">CLIENTE</label>
+                                    <input type="text" class="form-control" id="editarCliente">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="editarTubo" class="form-label">TUBO</label>
+                                    <input type="text" class="form-control" id="editarTubo">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="editarEncamisado" class="form-label">ENCAMISADO</label>
+                                    <input type="text" class="form-control" id="editarEncamisado">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="editarTipoTubo" class="form-label">TIPO TUBO</label>
+                                    <input type="text" class="form-control" id="editarTipoTubo">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="editarTamanoCubierta" class="form-label">TAMAÑO CUBIERTA</label>
+                                    <input type="text" class="form-control" id="editarTamanoCubierta">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="editarMarcaCubiertas" class="form-label">MARCA CUBIERTAS</label>
+                                    <input type="text" class="form-control" id="editarMarcaCubiertas">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="editarColor" class="form-label">COLOR</label>
+                                    <input type="text" class="form-control" id="editarColor">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="editarBalanza" class="form-label">BALANZA</label>
+                                    <input type="text" class="form-control" id="editarBalanza">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="editarEntregada" class="form-label">ENTREGADA</label>
+                                    <select class="form-control" id="editarEntregada">
+                                        <option value="">Seleccionar...</option>
+                                        <option value="NO">NO</option>
+                                        <option value="SI">SI</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="editarObservaciones" class="form-label">OBSERVACIONES</label>
+                            <textarea class="form-control" id="editarObservaciones" rows="2"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn btn-warning" onclick="guardarEdicionFila()">
+                        <i class="fas fa-save me-2"></i>
+                        Guardar Cambios
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Importar Excel -->
+    <div class="modal fade" id="importarExcelModal" tabindex="-1" aria-labelledby="importarExcelModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="importarExcelModalLabel">
+                        <i class="fas fa-file-excel me-2"></i>
+                        Importar Datos desde Excel
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="excelFile" class="form-label">Seleccionar Archivo Excel</label>
+                        <input type="file" class="form-control" id="excelFile" accept=".xlsx,.xls">
+                        <small class="text-muted">Seleccione un archivo Excel (.xlsx o .xls) con los datos a importar</small>
+                    </div>
+                    
+                    <div id="requisitosExcel" class="alert alert-info">
+                        <h6><i class="fas fa-info-circle me-2"></i>Requisitos del Archivo Excel:</h6>
+                        <ul class="mb-0">
+                            <li>El archivo debe tener las columnas: <strong>nro_chasis, cliente, tubo, color</strong></li>
+                            <li>El orden de las columnas debe ser exactamente como se indica</li>
+                            <li>Los datos comenzarán a importarse desde la fila 2 (encabezados en fila 1)</li>
+                            <li>No incluir columnas: <strong>id, plan_id, fecha_asignacion</strong></li>
+                        </ul>
+                    </div>
+                    
+                    <div id="resultadoImportacion" style="display: none;">
+                        <!-- Resultados se mostrarán aquí -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="importarExcel()">
+                        <i class="fas fa-upload me-2"></i>
+                        Importar Datos
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Cambiar Estado de Puesto -->
+    <div class="modal fade" id="modalCambiarEstado" tabindex="-1" aria-labelledby="modalCambiarEstadoLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title" id="modalCambiarEstadoLabel">
+                        <i class="fas fa-edit me-2"></i>
+                        Cambiar Estado de Puesto
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Chasis:</label>
+                        <div id="estadoChasis" class="form-control-plaintext fw-bold text-primary"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Puesto:</label>
+                        <div id="estadoPuesto" class="form-control-plaintext fw-bold text-info"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Estado Actual:</label>
+                        <div id="estadoActual" class="form-control-plaintext"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="nuevoEstado" class="form-label fw-bold">Nuevo Estado:</label>
+                        <select id="nuevoEstado" class="form-select form-select-lg">
+                            <option value="">-- Seleccionar --</option>
+                            <option value="PENDIENTE">🔴 PENDIENTE</option>
+                            <option value="EN_PROGRESO">🟡 EN PROGRESO</option>
+                            <option value="TERMINADO">🟢 TERMINADO</option>
+                        </select>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Este cambio actualizará el estado del puesto para el chasis seleccionado en el plan de producción.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="guardarCambioEstado()">
+                        <i class="fas fa-save me-2"></i>
+                        Guardar Cambio
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Datos de la planilla (pasados desde Flask)
+        const planillaDatos = {{ planilla_datos | tojson }};
+        
+        // JavaScript para sincronizar tablas y renderizar datos
+        document.addEventListener('DOMContentLoaded', function() {
+            const scrollTop = document.getElementById('scrollTop');
+            const tableScrollable = document.getElementById('tableScrollable');
+            const externalContainer = document.querySelector('.external-scroll-container');
+            
+            // Renderizar datos en la tabla scrollable
+            renderizarDatosScrollable();
+            
+            // Mantener encabezados fijos verticalmente
+            if (externalContainer) {
+                const allHeaders = externalContainer.querySelectorAll('thead th');
+                
+                externalContainer.addEventListener('scroll', function() {
+                    const scrollY = this.scrollTop;
+                    
+                    // Mover encabezados hacia abajo con el scroll
+                    allHeaders.forEach(header => {
+                        header.style.transform = `translateY(${scrollY}px)`;
+                        header.style.position = 'relative';
+                        header.style.zIndex = '100';
+                        header.style.background = 'linear-gradient(135deg, #007bff 0%, #0056b3 100%)';
+                    });
+                });
+            }
+            
+            if (scrollTop && tableScrollable) {
+                // Sincronizar scroll simple
+                tableScrollable.addEventListener('scroll', function() {
+                    scrollTop.scrollLeft = this.scrollLeft;
+                });
+                
+                scrollTop.addEventListener('scroll', function() {
+                    tableScrollable.scrollLeft = this.scrollLeft;
+                });
+                
+                // Ajustar ancho del scroll superior
+                const scrollContent = scrollTop.querySelector('.scroll-content');
+                if (scrollContent) {
+                    scrollContent.style.width = '1400px'; /* Actualizar a 1400px */
+                }
+            }
+            
+            // Funcionalidad para ocultar/mostrar avances
+            const toggleAvances = document.getElementById('toggleAvances');
+            if (toggleAvances) {
+                let avancesVisible = true;
+                
+                toggleAvances.addEventListener('click', function() {
+                    const table = document.querySelector('.table-scrollable table');
+                    const scrollContent = document.querySelector('.scroll-content');
+                    
+                    if (avancesVisible) {
+                        // MODO AVANCES: Ocultar características y entrega, ancho completo
+                        document.querySelectorAll('.caracteristica').forEach(col => {
+                            col.style.display = 'none';
+                        });
+                        document.querySelectorAll('.entrega').forEach(col => {
+                            col.style.display = 'none';
+                        });
+                        
+                        // Asegurar que avances y fijas sean visibles
+                        document.querySelectorAll('.puesto-produccion').forEach(col => {
+                            col.style.display = '';
+                        });
+                        document.querySelectorAll('.table-fixed th, .table-fixed td').forEach(col => {
+                            col.style.display = '';
+                        });
+                        
+                        // Usar 100% del ancho disponible
+                        if (table) {
+                            table.style.minWidth = '100%';
+                            table.style.width = '100%';
+                        }
+                        if (scrollContent) {
+                            scrollContent.style.width = '100%';
+                        }
+                        
+                        this.innerHTML = '<i class="fas fa-eye me-2"></i>VER TODAS';
+                        this.classList.remove('btn-success');
+                        this.classList.add('btn-warning');
+                        avancesVisible = false;
+                    } else {
+                        // MODO COMPLETO: Mostrar todo, ancho fijo
+                        document.querySelectorAll('.caracteristica').forEach(col => {
+                            col.style.display = '';
+                        });
+                        document.querySelectorAll('.entrega').forEach(col => {
+                            col.style.display = '';
+                        });
+                        document.querySelectorAll('.puesto-produccion').forEach(col => {
+                            col.style.display = '';
+                        });
+                        document.querySelectorAll('.table-fixed th, .table-fixed td').forEach(col => {
+                            col.style.display = '';
+                        });
+                        
+                        // Restaurar ancho fijo original
+                        if (table) {
+                            table.style.minWidth = '1400px';
+                            table.style.width = '1400px';
+                        }
+                        if (scrollContent) {
+                            scrollContent.style.width = '1400px';
+                        }
+                        
+                        this.innerHTML = '<i class="fas fa-tasks me-2"></i>AVANCES';
+                        this.classList.remove('btn-warning');
+                        this.classList.add('btn-success');
+                        avancesVisible = true;
+                    }
+                    
+                    // Forzar recálculo del scroll
+                    setTimeout(() => {
+                        const scrollTop = document.getElementById('scrollTop');
+                        const tableScrollable = document.getElementById('tableScrollable');
+                        if (scrollTop && tableScrollable) {
+                            scrollTop.scrollLeft = 0;
+                            tableScrollable.scrollLeft = 0;
+                        }
+                    }, 100);
+                });
+            }
+            
+            // Funcionalidad para ocultar/mostrar características
+            const toggleCaracteristicas = document.getElementById('toggleCaracteristicas');
+            if (toggleCaracteristicas) {
+                let caracteristicasVisible = true;
+                
+                toggleCaracteristicas.addEventListener('click', function() {
+                    const columnasCaracteristicas = document.querySelectorAll('.caracteristica');
+                    const icon = this.querySelector('i');
+                    
+                    if (caracteristicasVisible) {
+                        // Ocultar columnas de características
+                        columnasCaracteristicas.forEach(col => {
+                            col.style.display = 'none';
+                        });
+                        this.innerHTML = '<i class="fas fa-list-ul me-2"></i>Ver Características';
+                        caracteristicasVisible = false;
+                    } else {
+                        // Mostrar columnas de características
+                        columnasCaracteristicas.forEach(col => {
+                            col.style.display = '';
+                        });
+                        this.innerHTML = '<i class="fas fa-list me-2"></i>Ver Características';
+                        caracteristicasVisible = true;
+                    }
+                });
+            }
+            
+            // Funcionalidad para ocultar/mostrar entrega
+            const toggleEntrega = document.getElementById('toggleEntrega');
+            if (toggleEntrega) {
+                let entregaVisible = true;
+                
+                toggleEntrega.addEventListener('click', function() {
+                    const columnasEntrega = document.querySelectorAll('.entrega');
+                    const icon = this.querySelector('i');
+                    
+                    if (entregaVisible) {
+                        // Ocultar columnas de entrega
+                        columnasEntrega.forEach(col => {
+                            col.style.display = 'none';
+                        });
+                        this.innerHTML = '<i class="fas fa-eye-slash me-2"></i>Mostrar Entrega';
+                        entregaVisible = false;
+                    } else {
+                        // Mostrar columnas de entrega
+                        columnasEntrega.forEach(col => {
+                            col.style.display = '';
+                        });
+                        this.innerHTML = '<i class="fas fa-truck me-2"></i>Ver Entrega';
+                        entregaVisible = true;
+                    }
+                });
+            }
+            
+            // Funcionalidad para ocultar/mostrar cliente a observaciones
+            const toggleClienteObs = document.getElementById('toggleClienteObservaciones');
+            if (toggleClienteObs) {
+                let clienteObsVisible = true;
+                
+                toggleClienteObs.addEventListener('click', function() {
+                    const columnasCaracteristicas = document.querySelectorAll('.caracteristica');
+                    const icon = this.querySelector('i');
+                    
+                    if (clienteObsVisible) {
+                        // Ocultar columnas de cliente a observaciones
+                        columnasCaracteristicas.forEach(col => {
+                            col.style.display = 'none';
+                        });
+                        this.innerHTML = '<i class="fas fa-eye-slash me-2"></i>Mostrar Cliente a Observaciones';
+                        clienteObsVisible = false;
+                    } else {
+                        // Mostrar columnas de cliente a observaciones
+                        columnasCaracteristicas.forEach(col => {
+                            col.style.display = '';
+                        });
+                        this.innerHTML = '<i class="fas fa-user me-2"></i>Ver Cliente a Observaciones';
+                        clienteObsVisible = true;
+                    }
+                });
+            }
+        });
+        
+        // Configuración de paginación
+        const TAMANO_PAGINA = 50; // Mostrar 50 filas por página
+        let paginaActual = 1;
+        let datosFiltrados = [];
+        
+        // Función para renderizar datos con paginación
+        function renderizarDatosPaginados() {
+            const tbody = document.querySelector('#tableScrollable tbody');
+            const tbodyFixed = document.querySelector('.table-fixed tbody');
+            if (!tbody || !tbodyFixed) return;
+            
+            // Limpiar contenido existente
+            tbody.innerHTML = '';
+            tbodyFixed.innerHTML = '';
+            
+            // Calcular índices para la página actual
+            const inicio = (paginaActual - 1) * TAMANO_PAGINA;
+            const fin = Math.min(inicio + TAMANO_PAGINA, datosFiltrados.length);
+            
+            // Renderizar solo las filas de la página actual
+            for (let i = inicio; i < fin; i++) {
+                const item = datosFiltrados[i];
+                if (!item) continue;
+                
+                // Crear fila para tabla scrollable
+                const trScrollable = document.createElement('tr');
+                trScrollable.dataset.index = i;
+                trScrollable.innerHTML = generarFilaHTML(item, i, false);
+                tbody.appendChild(trScrollable);
+                
+                // Crear fila para tabla fija (checkboxes)
+                const trFixed = document.createElement('tr');
+                trFixed.innerHTML = generarFilaHTML(item, i, true);
+                tbodyFixed.appendChild(trFixed);
+            }
+            
+            // Actualizar información de paginación
+            actualizarInfoPaginacion();
+            
+            // Actualizar contador de seleccionados
+            actualizarContadorSeleccionados();
+            
+            // Aplicar estado de columnas ocultas si es necesario
+            const boton = document.getElementById('toggleClienteObservaciones');
+            if (boton && boton.innerHTML.includes('Mostrar')) {
+                toggleClienteObservaciones();
+            }
+            
+            // Aplicar estado de avances si es necesario
+            const botonAvances = document.getElementById('toggleAvances');
+            if (botonAvances && botonAvances.innerHTML.includes('VER TODAS')) {
+                // MODO AVANCES: Ocultar características y entrega, ancho completo
+                document.querySelectorAll('.caracteristica').forEach(col => {
+                    col.style.display = 'none';
+                });
+                document.querySelectorAll('.entrega').forEach(col => {
+                    col.style.display = 'none';
+                });
+                document.querySelectorAll('.puesto-produccion').forEach(col => {
+                    col.style.display = '';
+                });
+                document.querySelectorAll('.table-fixed th, .table-fixed td').forEach(col => {
+                    col.style.display = '';
+                });
+                
+                // Usar 100% del ancho disponible
+                const table = document.querySelector('.table-scrollable table');
+                const scrollContent = document.querySelector('.scroll-content');
+                if (table) {
+                    table.style.minWidth = '100%';
+                    table.style.width = '100%';
+                }
+                if (scrollContent) {
+                    scrollContent.style.width = '100%';
+                }
+            } else {
+                // MODO COMPLETO: Asegurar que todo sea visible, ancho fijo
+                document.querySelectorAll('.caracteristica').forEach(col => {
+                    col.style.display = '';
+                });
+                document.querySelectorAll('.entrega').forEach(col => {
+                    col.style.display = '';
+                });
+                document.querySelectorAll('.puesto-produccion').forEach(col => {
+                    col.style.display = '';
+                });
+                document.querySelectorAll('.table-fixed th, .table-fixed td').forEach(col => {
+                    col.style.display = '';
+                });
+                
+                // Restaurar ancho fijo original
+                const table = document.querySelector('.table-scrollable table');
+                const scrollContent = document.querySelector('.scroll-content');
+                if (table) {
+                    table.style.minWidth = '1400px';
+                    table.style.width = '1400px';
+                }
+                if (scrollContent) {
+                    scrollContent.style.width = '1400px';
+                }
+            }
+        }
+        
+        // Función para generar HTML de una fila
+        function generarFilaHTML(item, index, esFija) {
+            // Pre-calcular todos los estados de puestos para evitar llamadas repetitivas
+            const estadosPuestosHTML = {};
+            const puestos = ['P1', 'P2', 'P3', 'P4', 'P5', 'P7', 'P8', 'P9', 'LAVADO', 'PINTURA', 'M1', 'M2', 'M3', 'M4', 'M5'];
+            
+            for (const puesto of puestos) {
+                const estadosPorPuesto = item.estados_por_puesto || {};
+                const estadoPuesto = estadosPorPuesto[puesto];
+                
+                if (estadoPuesto === 'TERMINADO') {
+                    estadosPuestosHTML[puesto] = `<div class="estado-circle cumplido clickable-circle" 
+                        title="${puesto}: TERMINADO (Click para cambiar)" 
+                        data-chasis="${item.nro_chasis}"
+                        data-puesto="${puesto}"
+                        data-estado="TERMINADO"
+                        onclick="abrirModalEstado('${item.nro_chasis}', '${puesto}', 'TERMINADO')"></div>`;
+                } else if (estadoPuesto === 'EN_PROGRESO') {
+                    estadosPuestosHTML[puesto] = `<div class="estado-circle en-progreso clickable-circle" 
+                        title="${puesto}: EN_PROGRESO (Click para cambiar)" 
+                        data-chasis="${item.nro_chasis}"
+                        data-puesto="${puesto}"
+                        data-estado="EN_PROGRESO"
+                        onclick="abrirModalEstado('${item.nro_chasis}', '${puesto}', 'EN_PROGRESO')"></div>`;
+                } else {
+                    estadosPuestosHTML[puesto] = `<div class="estado-circle pendiente clickable-circle" 
+                        title="${puesto}: PENDIENTE (Click para cambiar)" 
+                        data-chasis="${item.nro_chasis}"
+                        data-puesto="${puesto}"
+                        data-estado="PENDIENTE"
+                        onclick="abrirModalEstado('${item.nro_chasis}', '${puesto}', 'PENDIENTE')"></div>`;
+                }
+            }
+            
+            if (esFija) {
+                // Tabla fija - checkbox y columnas clave (LANZAMIENTO, N° CHASIS, MODELO)
+                // IMPORTANTE: Cada dato en su columna correcta
+                return `
+                    <td><input type="checkbox" class="form-check-input checkbox-fila" data-id="${item.id}"></td>
+                    <td class="caracteristica">${item.lanzamiento || '-'}</td>
+                    <td class="chasis-number">${item.nro_chasis || '-'}</td>
+                    <td class="caracteristica">${item.modelo || '-'}</td>
+                `;
+            } else {
+                // Tabla scrollable - todas las columnas con estados pre-calculados
+                // IMPORTANTE: Los índices deben coincidir exactamente con los headers
+                return `
+                    <td class="caracteristica">${item.cliente || '-'}</td>
+                    <td class="caracteristica">${item.tubo || '-'}</td>
+                    <td class="caracteristica">${item.encamisado || '-'}</td>
+                    <td class="caracteristica">${item.tipo_tubo || '-'}</td>
+                    <td class="caracteristica">${item.tamano_cubierta || '-'}</td>
+                    <td class="caracteristica">${item.marca_cubiertas || '-'}</td>
+                    <td class="caracteristica">${item.color || '-'}</td>
+                    <td class="caracteristica">${item.balanza || '-'}</td>
+                    <td class="caracteristica"><div data-observaciones>${item.observaciones || '-'}</div></td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['P1']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['P2']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['P3']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['P4']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['P5']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['P7']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['P8']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['P9']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['LAVADO']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['PINTURA']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['M1']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['M2']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['M3']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['M4']}</td>
+                    <td class="puesto-produccion">${estadosPuestosHTML['M5']}</td>
+                    <td class="caracteristica">${item.entregada || '-'}</td>
+                    <td class="caracteristica">${item.fecha_entrega || '-'}</td>
+                    <td class="caracteristica">${item.pedido || '-'}</td>
+                    <td class="caracteristica">${item.liberada_ventas || '-'}</td>
+                    <td class="caracteristica">${item.llantas_ok || '-'}</td>
+                    <td class="caracteristica">${item.cubiertas_ok || '-'}</td>
+                    <td class="caracteristica"><div data-observaciones>${item.observaciones_2 || '-'}</div></td>
+                    <td class="caracteristica">${item.proveedor_sinfin || '-'}</td>
+                    <td class="caracteristica">${item.dias_consignacion || '-'}</td>
+                `;
+            }
+        }
+        
+        // Función para actualizar información de paginación
+        function actualizarInfoPaginacion() {
+            const totalPaginas = Math.ceil(datosFiltrados.length / TAMANO_PAGINA);
+            const infoDiv = document.getElementById('paginacionInfo');
+            
+            if (infoDiv) {
+                infoDiv.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>Mostrando ${((paginaActual - 1) * TAMANO_PAGINA) + 1} - ${Math.min(paginaActual * TAMANO_PAGINA, datosFiltrados.length)} de ${datosFiltrados.length} registros</span>
+                        <div>
+                            <button class="btn btn-sm btn-outline-primary" onclick="cambiarPagina(${paginaActual - 1})" ${paginaActual === 1 ? 'disabled' : ''}>
+                                <i class="fas fa-chevron-left"></i> Anterior
+                            </button>
+                            <span class="mx-2">Página ${paginaActual} de ${totalPaginas}</span>
+                            <button class="btn btn-sm btn-outline-primary" onclick="cambiarPagina(${paginaActual + 1})" ${paginaActual === totalPaginas ? 'disabled' : ''}>
+                                Siguiente <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        // Función para cambiar de página
+        function cambiarPagina(nuevaPagina) {
+            const totalPaginas = Math.ceil(datosFiltrados.length / TAMANO_PAGINA);
+            if (nuevaPagina >= 1 && nuevaPagina <= totalPaginas) {
+                paginaActual = nuevaPagina;
+                renderizarDatosPaginados();
+                // Scroll al inicio de la tabla
+                document.querySelector('.table-scrollable').scrollTop = 0;
+            }
+        }
+        
+        // Función original de renderizado (ahora con paginación)
+        function renderizarDatosScrollable() {
+            // Inicializar datos filtrados con todos los datos
+            datosFiltrados = [...planillaDatos];
+            paginaActual = 1;
+            renderizarDatosPaginados();
+        }
+        
+        // Función de búsqueda global actualizada para paginación
+        function realizarBusquedaGlobal() {
+            const textoBusqueda = document.getElementById('busquedaGlobal').value.toLowerCase().trim();
+            
+            if (textoBusqueda === '') {
+                datosFiltrados = [...planillaDatos];
+            } else {
+                datosFiltrados = planillaDatos.filter(item => {
+                    return Object.values(item).some(valor => 
+                        valor && valor.toString().toLowerCase().includes(textoBusqueda)
+                    );
+                });
+            }
+            
+            paginaActual = 1;
+            renderizarDatosPaginados();
+        }
+        
+        // Función para limpiar búsqueda
+        function limpiarBusquedaGlobal() {
+            document.getElementById('busquedaGlobal').value = '';
+            datosFiltrados = [...planillaDatos];
+            paginaActual = 1;
+            renderizarDatosPaginados();
+        }
+        
+        // Función para mostrar todas las filas (actualizada)
+        function mostrarTodasLasFilas() {
+            datosFiltrados = [...planillaDatos];
+            paginaActual = 1;
+            renderizarDatosPaginados();
+        }
+        
+        // Actualizar función de búsqueda para trabajar con paginación
+        function buscarEnTabla(texto) {
+            console.log('Buscando:', texto);
+            
+            const tbodyScrollable = document.querySelector('#tableScrollable tbody');
+            const filasScrollable = tbodyScrollable.querySelectorAll('tr');
+            
+            const tbodyFixed = document.querySelector('.table-fixed tbody');
+            const filasFixed = tbodyFixed.querySelectorAll('tr');
+            
+            let filasVisibles = 0;
+            
+            for (let i = 0; i < filasScrollable.length; i++) {
+                const filaScrollable = filasScrollable[i];
+                const filaFixed = filasFixed[i];
+                const textoFila = filaScrollable.textContent.toLowerCase();
+                
+                if (textoFila.includes(texto.toLowerCase())) {
+                    filaScrollable.style.display = '';
+                    filaFixed.style.display = '';
+                    filasVisibles++;
+                } else {
+                    filaScrollable.style.display = 'none';
+                    filaFixed.style.display = 'none';
+                }
+            }
+            
+            console.log(`Se encontraron ${filasVisibles} filas visibles`);
+        }
+        
+        // Inicialización cuando el DOM esté listo
+        document.addEventListener('DOMContentLoaded', function() {
+            renderizarDatosScrollable();
+        });
+        
+        // Función para editar fila seleccionada
+        function editarSeleccionados() {
+            console.log('DEBUG: editarSeleccionados() iniciada');
+            const checkedBoxes = document.querySelectorAll('.checkbox-fila:checked');
+            console.log('DEBUG: checkboxes encontrados:', checkedBoxes.length);
+            console.log('DEBUG: checkboxes:', checkedBoxes);
+            
+            if (checkedBoxes.length !== 1) {
+                console.log('DEBUG: No hay exactamente 1 checkbox seleccionado');
+                showWarningModal('Selección Inválida', 'Por favor selecciona exactamente una fila para editar');
+                return;
+            }
+            
+            const id = checkedBoxes[0].dataset.id;
+            console.log('DEBUG: ID del checkbox:', id);
+            
+            // Buscar los datos de la fila seleccionada
+            const filaData = planillaDatos.find(item => item.id == id);
+            console.log('DEBUG: filaData encontrado:', filaData);
+            
+            if (filaData) {
+                console.log('DEBUG: Llenando formulario...');
+                // Llenar el formulario de edición con los datos
+                document.getElementById('editarFilaId').value = filaData.id;
+                document.getElementById('editarLanzamiento').value = filaData.lanzamiento || '';
+                document.getElementById('editarNroChasis').value = filaData.nro_chasis || '';
+                document.getElementById('editarModelo').value = filaData.modelo || '';
+                document.getElementById('editarCliente').value = filaData.cliente || '';
+                document.getElementById('editarTubo').value = filaData.tubo || '';
+                document.getElementById('editarEncamisado').value = filaData.encamisado || '';
+                document.getElementById('editarTipoTubo').value = filaData.tipo_tubo || '';
+                document.getElementById('editarTamanoCubierta').value = filaData.tamano_cubierta || '';
+                document.getElementById('editarMarcaCubiertas').value = filaData.marca_cubiertas || '';
+                document.getElementById('editarColor').value = filaData.color || '';
+                document.getElementById('editarBalanza').value = filaData.balanza || '';
+                document.getElementById('editarObservaciones').value = filaData.observaciones || '';
+                document.getElementById('editarEntregada').value = filaData.entregada || '';
+                
+                console.log('DEBUG: Intentando abrir modal...');
+                // Abrir el modal de edición
+                const modalElement = document.getElementById('editarFilaModal');
+                console.log('DEBUG: Modal element encontrado:', modalElement);
+                
+                if (modalElement) {
+                    const modal = new bootstrap.Modal(modalElement);
+                    console.log('DEBUG: Modal creado:', modal);
+                    modal.show();
+                    console.log('DEBUG: Modal.show() ejecutado');
+                } else {
+                    console.log('DEBUG: No se encontró el modal');
+                    showErrorModal('Error', 'No se encontró el modal de edición');
+                }
+            } else {
+                console.log('DEBUG: No se encontraron datos para el ID:', id);
+                showErrorModal('Datos no encontrados', 'No se encontraron datos para la fila seleccionada');
+            }
+        }
+        
+        // Función para eliminar filas seleccionadas
+        async function eliminarSeleccionados() {
+            console.log('DEBUG: eliminarSeleccionados() iniciada');
+            
+            try {
+                const checkboxes = document.querySelectorAll('.checkbox-fila:checked');
+                console.log('DEBUG: checkboxes encontrados:', checkboxes.length);
+                console.log('DEBUG: checkboxes:', checkboxes);
+                
+                if (checkboxes.length === 0) {
+                    console.log('DEBUG: No hay checkboxes seleccionados');
+                    showWarningModal('Sin Selección', 'Por favor selecciona al menos una fila para eliminar');
+                    return;
+                }
+                
+                const ids = Array.from(checkboxes).map(cb => {
+                    console.log('DEBUG: Procesando checkbox:', cb);
+                    console.log('DEBUG: cb.dataset:', cb.dataset);
+                    return cb.dataset.id;
+                });
+                console.log('DEBUG: IDs extraídos:', ids);
+                
+                if (ids.length === 0) {
+                    console.log('DEBUG: No se pudieron extraer IDs');
+                    showErrorModal('Error', 'No se pudieron extraer los IDs de las filas seleccionadas');
+                    return;
+                }
+                
+                // Confirmación con modal personalizado
+                showConfirmModal(
+                    'Confirmar Eliminación',
+                    `¿Estás seguro de que deseas eliminar ${ids.length} fila(s)? Esta acción no se puede deshacer.`,
+                    async function() {
+                        console.log('DEBUG: Enviando solicitud al backend...');
+                        console.log('DEBUG: IDs a enviar:', ids);
+                        
+                        const csrfToken = document.querySelector('input[name="csrf_token"]') || 
+                                  document.querySelector('meta[name="csrf-token"]') ||
+                                  document.querySelector('[name="csrf_token"]');
+                        console.log('DEBUG: CSRF token encontrado:', csrfToken ? 'SÍ' : 'NO');
+                        console.log('DEBUG: CSRF token element:', csrfToken);
+                        
+                        if (!csrfToken) {
+                            console.error('ERROR: No se encontró el CSRF token');
+                            showErrorModal('Error de Seguridad', 'No se encontró el token de seguridad. Recargue la página.');
+                            return;
+                        }
+                        
+                        const response = await fetch('/admin/eliminar_seleccionados', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': csrfToken.value || csrfToken.content || ''
+                            },
+                            body: JSON.stringify({ 
+                                ids: ids,
+                                implemento: '{{ implemento }}'
+                            })
+                        });
+                        
+                        console.log('DEBUG: Response status:', response.status);
+                        console.log('DEBUG: Response ok:', response.ok);
+                        
+                        const data = await response.json();
+                        console.log('DEBUG: Respuesta del backend:', data);
+                        
+                        if (data.success) {
+                            console.log('DEBUG: Eliminación exitosa, recargando página...');
+                            showSuccessModal('Eliminación Exitosa', `Se eliminaron ${data.total_eliminados} filas correctamente.`, function() {
+                                location.reload();
+                            });
+                        } else {
+                            console.log('DEBUG: Error en eliminación:', data.error);
+                            showErrorModal('Error al Eliminar', data.error);
+                        }
+                    }
+                );
+                
+            } catch (error) {
+                console.error('ERROR GENERAL en eliminarSeleccionados():', error);
+                console.error('Stack trace:', error.stack);
+                showErrorModal('Error inesperado', error.message);
+            }
+        }
+        
+        // Funciones para mostrar modales personalizados
+        function showSuccessModal(title, message, callback = null) {
+            document.getElementById('successTitle').textContent = title;
+            document.getElementById('successMessage').textContent = message;
+            const modal = new bootstrap.Modal(document.getElementById('successModal'));
+            modal.show();
+            
+            if (callback) {
+                document.getElementById('successModal').addEventListener('hidden.bs.modal', function() {
+                    callback();
+                }, { once: true });
+            }
+        }
+        
+        function showErrorModal(title, message, callback = null) {
+            document.getElementById('errorTitle').textContent = title;
+            document.getElementById('errorMessage').textContent = message;
+            const modal = new bootstrap.Modal(document.getElementById('errorModal'));
+            modal.show();
+            
+            if (callback) {
+                document.getElementById('errorModal').addEventListener('hidden.bs.modal', function() {
+                    callback();
+                }, { once: true });
+            }
+        }
+        
+        function showWarningModal(title, message, callback = null) {
+            document.getElementById('warningTitle').textContent = title;
+            document.getElementById('warningMessage').textContent = message;
+            const modal = new bootstrap.Modal(document.getElementById('warningModal'));
+            modal.show();
+            
+            if (callback) {
+                document.getElementById('warningModal').addEventListener('hidden.bs.modal', function() {
+                    callback();
+                }, { once: true });
+            }
+        }
+        
+        function showConfirmModal(title, message, onConfirm) {
+            document.getElementById('confirmTitle').textContent = title;
+            document.getElementById('confirmMessage').textContent = message;
+            const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
+            
+            // Remover event listeners anteriores
+            const confirmBtn = document.getElementById('confirmButton');
+            const newConfirmBtn = confirmBtn.cloneNode(true);
+            confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+            
+            // Agregar nuevo event listener
+            newConfirmBtn.addEventListener('click', function() {
+                modal.hide();
+                onConfirm();
+            });
+            
+            modal.show();
+        }
+        
+        // Reemplazar alert() con modales personalizados
+        function confirmPersonalizado(mensaje) {
+            // Crear overlay
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.5);
+                z-index: 9999;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            `;
+            
+            // Crear ventana emergente
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                background-color: #fff;
+                border: 2px solid #dc3545;
+                border-radius: 8px;
+                padding: 20px;
+                max-width: 400px;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+                animation: slideIn 0.3s ease-out;
+            `;
+            
+            // Crear mensaje
+            const mensajeDiv = document.createElement('div');
+            mensajeDiv.style.cssText = `
+                color: #dc3545;
+                font-weight: bold;
+                margin-bottom: 20px;
+                font-size: 16px;
+                text-align: center;
+            `;
+            mensajeDiv.textContent = mensaje;
+            
+            // Crear botones
+            const botonesDiv = document.createElement('div');
+            botonesDiv.style.cssText = `
+                display: flex;
+                gap: 10px;
+                justify-content: center;
+            `;
+            
+            const btnAceptar = document.createElement('button');
+            btnAceptar.textContent = 'Aceptar';
+            btnAceptar.style.cssText = `
+                background-color: #dc3545;
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-weight: bold;
+            `;
+            btnAceptar.onclick = () => {
+                document.body.removeChild(overlay);
+                return true;
+            };
+            
+            const btnCancelar = document.createElement('button');
+            btnCancelar.textContent = 'Cancelar';
+            btnCancelar.style.cssText = `
+                background-color: #6c757d;
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 4px;
+                cursor: pointer;
+            `;
+            btnCancelar.onclick = () => {
+                document.body.removeChild(overlay);
+                return false;
+            };
+            
+            // Ensamblar
+            botonesDiv.appendChild(btnAceptar);
+            botonesDiv.appendChild(btnCancelar);
+            modal.appendChild(mensajeDiv);
+            modal.appendChild(botonesDiv);
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+            
+            // Agregar animación
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes slideIn {
+                    from {
+                        opacity: 0;
+                        transform: translateY(-50px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+            
+            // Esperar respuesta (sincronía simple)
+            return new Promise((resolve) => {
+                btnAceptar.onclick = () => {
+                    document.body.removeChild(overlay);
+                    resolve(true);
+                };
+                btnCancelar.onclick = () => {
+                    document.body.removeChild(overlay);
+                    resolve(false);
+                };
+            });
+        }
+        
+        // Función para actualizar contador de seleccionados
+        function actualizarContadorSeleccionados() {
+            const checkboxes = document.querySelectorAll('.checkbox-fila:checked');
+            const contador = document.getElementById('contadorSeleccionados');
+            const btnEliminar = document.getElementById('btnEliminarSeleccionados');
+            const btnEditar = document.getElementById('btnEditarSeleccionado');
+            
+            if (contador) {
+                contador.textContent = checkboxes.length;
+            }
+            
+            if (btnEliminar) {
+                btnEliminar.disabled = checkboxes.length === 0;
+            }
+            
+            if (btnEditar) {
+                btnEditar.disabled = checkboxes.length !== 1;
+            }
+        }
+        
+        // Agregar event listeners para los checkboxes
+        document.addEventListener('DOMContentLoaded', function() {
+            // Event listener para checkboxes
+            document.addEventListener('change', function(e) {
+                if (e.target.classList.contains('checkbox-fila')) {
+                    actualizarContadorSeleccionados();
+                }
+            });
+        });
+        
+        // Función para agregar fila manual
+        function agregarFilaManual() {
+            console.log('=== DEPURACIÓN AGREGAR FILA MANUAL ===');
+            console.log('Valores del formulario:');
+            console.log('nro_chasis:', document.getElementById('nro_chasis_manual').value);
+            console.log('modelo:', document.getElementById('modelo_manual').value);
+            console.log('lanzamiento:', document.getElementById('lanzamiento_manual').value);
+            console.log('cliente:', document.getElementById('cliente_manual').value);
+            console.log('tubo:', document.getElementById('tubo_manual').value);
+            console.log('color:', document.getElementById('color_manual').value);
+            console.log('balanza:', document.getElementById('balanza_manual').value);
+            console.log('observaciones:', document.getElementById('observaciones_manual').value);
+            
+            const formData = {
+                nro_chasis: document.getElementById('nro_chasis_manual').value,
+                modelo: document.getElementById('modelo_manual').value,
+                lanzamiento: document.getElementById('lanzamiento_manual').value,
+                cliente: document.getElementById('cliente_manual').value,
+                tubo: document.getElementById('tubo_manual').value,
+                color: document.getElementById('color_manual').value,
+                balanza: document.getElementById('balanza_manual').value,
+                observaciones: document.getElementById('observaciones_manual').value
+            };
+            
+            console.log('FormData a enviar:', formData);
+            
+            fetch('/admin/agregar_fila_manual', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Respuesta del servidor:', data);
+                if (data.success) {
+                    showSuccessModal('Fila Agregada', data.mensaje, function() {
+                        location.reload();
+                    });
+                } else {
+                    showErrorModal('Error al Agregar', data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showErrorModal('Error de Conexión', 'No se pudo conectar con el servidor al agregar la fila');
+            });
+        }
+        
+        // Función para guardar edición de fila
+        function guardarEdicionFila() {
+            const formData = {
+                id: document.getElementById('editarFilaId').value,
+                lanzamiento: document.getElementById('editarLanzamiento').value,
+                nro_chasis: document.getElementById('editarNroChasis').value,
+                modelo: document.getElementById('editarModelo').value,
+                cliente: document.getElementById('editarCliente').value,
+                tubo: document.getElementById('editarTubo').value,
+                encamisado: document.getElementById('editarEncamisado').value,
+                tipo_tubo: document.getElementById('editarTipoTubo').value,
+                tamano_cubierta: document.getElementById('editarTamanoCubierta').value,
+                marca_cubiertas: document.getElementById('editarMarcaCubiertas').value,
+                color: document.getElementById('editarColor').value,
+                balanza: document.getElementById('editarBalanza').value,
+                entregada: document.getElementById('editarEntregada').value,
+                observaciones: document.getElementById('editarObservaciones').value
+            };
+            
+            fetch('/admin/editar_seleccionados', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showSuccessModal('Fila Actualizada', data.message, function() {
+                        location.reload();
+                    });
+                } else {
+                    showErrorModal('Error al Actualizar', data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showErrorModal('Error de Conexión', 'No se pudo conectar con el servidor al actualizar la fila');
+            });
+        }
+        
+        // Función para importar Excel
+        function importarExcel() {
+            const fileInput = document.getElementById('excelFile');
+            console.log('DEBUG: fileInput encontrado:', fileInput);
+            console.log('DEBUG: fileInput.files:', fileInput.files);
+            console.log('DEBUG: fileInput.files.length:', fileInput.files.length);
+            
+            const file = fileInput.files[0];
+            console.log('DEBUG: archivo seleccionado:', file);
+            
+            if (!file) {
+                console.log('DEBUG: No se seleccionó archivo');
+                showWarningModal('Archivo no seleccionado', 'Por favor selecciona un archivo Excel');
+                return;
+            }
+            
+            console.log('DEBUG: Creando FormData...');
+            const formData = new FormData();
+            formData.append('file', file);
+            console.log('DEBUG: FormData creado, enviando a:', '/admin/importar_excel/{{ implemento }}');
+            
+            fetch('/admin/importar_excel/{{ implemento }}', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                const resultadoDiv = document.getElementById('resultadoImportacion');
+                const requisitosDiv = document.getElementById('requisitosExcel');
+                
+                if (data.success) {
+                    resultadoDiv.innerHTML = `
+                        <div class="alert alert-success">
+                            <h6><i class="fas fa-check-circle me-2"></i>Importación Exitosa</h6>
+                            <p>Se importaron ${data.insertados} registros correctamente.</p>
+                            ${data.duplicados > 0 ? `<p class="mb-0"><strong>Advertencia:</strong> ${data.duplicados} registros estaban duplicados y no se importaron.</p>` : ''}
+                        </div>
+                    `;
+                    requisitosDiv.style.display = 'none';
+                    
+                    // Recargar página después de 3 segundos
+                    setTimeout(() => {
+                        location.reload();
+                    }, 3000);
+                } else {
+                    resultadoDiv.innerHTML = `
+                        <div class="alert alert-danger">
+                            <h6><i class="fas fa-exclamation-triangle me-2"></i>Error en Importación</h6>
+                            <p>${data.error}</p>
+                        </div>
+                    `;
+                }
+                
+                resultadoDiv.style.display = 'block';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showErrorModal('Error de Conexión', 'No se pudo conectar con el servidor al importar el archivo Excel');
+            });
+        }
+        
+        // ========== FUNCIONES PARA CAMBIAR ESTADO DE PUESTO ==========
+        
+        // Variable global para almacenar el estado actual
+        let estadoActualGlobal = '';
+        
+        function abrirModalEstado(chasis, puesto, estadoActual) {
+            console.log('Abriendo modal para:', chasis, puesto, estadoActual);
+            
+            // Almacenar estado actual globalmente
+            estadoActualGlobal = estadoActual;
+            
+            // Llenar los datos del modal
+            document.getElementById('estadoChasis').textContent = chasis;
+            document.getElementById('estadoPuesto').textContent = puesto;
+            
+            // Mostrar estado actual con color correspondiente
+            let estadoHTML = '';
+            if (estadoActual === 'TERMINADO') {
+                estadoHTML = '<span class="badge bg-success">🟢 TERMINADO</span>';
+            } else if (estadoActual === 'EN_PROGRESO') {
+                estadoHTML = '<span class="badge bg-warning">🟡 EN PROGRESO</span>';
+            } else {
+                estadoHTML = '<span class="badge bg-danger">🔴 PENDIENTE</span>';
+            }
+            document.getElementById('estadoActual').innerHTML = estadoHTML;
+            
+            // Resetear el select y establecer el estado actual
+            const selectNuevoEstado = document.getElementById('nuevoEstado');
+            selectNuevoEstado.value = '';
+            
+            // Abrir el modal
+            const modal = new bootstrap.Modal(document.getElementById('modalCambiarEstado'));
+            modal.show();
+        }
+        
+        async function guardarCambioEstado() {
+            const chasis = document.getElementById('estadoChasis').textContent;
+            const puesto = document.getElementById('estadoPuesto').textContent;
+            const nuevoEstado = document.getElementById('nuevoEstado').value;
+            
+            if (!nuevoEstado) {
+                showWarningModal('Estado Requerido', 'Por favor selecciona un nuevo estado');
+                return;
+            }
+            
+            if (nuevoEstado === estadoActualGlobal) {
+                showWarningModal('Sin Cambios', 'El nuevo estado es igual al estado actual');
+                return;
+            }
+            
+            try {
+                // Mostrar indicador de carga
+                const btnGuardar = document.querySelector('#modalCambiarEstado .btn-primary');
+                const textoOriginal = btnGuardar.innerHTML;
+                btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Guardando...';
+                btnGuardar.disabled = true;
+                
+                // Enviar solicitud al backend
+                const response = await fetch('/admin/cambiar_estado_puesto', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+                    },
+                    body: JSON.stringify({
+                        chasis: chasis,
+                        puesto: puesto,
+                        nuevo_estado: nuevoEstado,
+                        implemento: '{{ implemento }}'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Cerrar el modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('modalCambiarEstado'));
+                    modal.hide();
+                    
+                    // Mostrar mensaje de éxito
+                    showSuccessModal('Estado Actualizado', `El estado del puesto ${puesto} para el chasis ${chasis} ha sido actualizado a ${nuevoEstado}`, function() {
+                        // Recargar la página para mostrar los cambios
+                        location.reload();
+                    });
+                } else {
+                    showErrorModal('Error al Actualizar', data.error || 'No se pudo actualizar el estado');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showErrorModal('Error de Conexión', 'No se pudo conectar con el servidor');
+            } finally {
+                // Restaurar el botón
+                const btnGuardar = document.querySelector('#modalCambiarEstado .btn-primary');
+                btnGuardar.innerHTML = textoOriginal;
+                btnGuardar.disabled = false;
+            }
+        }
+        
+    </script>
+
+    <!-- Modales Personalizados -->
+    <div class="modal fade" id="successModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0">
+                <div class="modal-header bg-success text-white border-0">
+                    <h5 class="modal-title">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <span id="successTitle">Éxito</span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0" id="successMessage">Operación realizada correctamente.</p>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-success" data-bs-dismiss="modal">Aceptar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="errorModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0">
+                <div class="modal-header bg-danger text-white border-0">
+                    <h5 class="modal-title">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <span id="errorTitle">Error</span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0" id="errorMessage">Ha ocurrido un error.</p>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Aceptar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="warningModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0">
+                <div class="modal-header bg-warning text-dark border-0">
+                    <h5 class="modal-title">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        <span id="warningTitle">Advertencia</span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0" id="warningMessage">Esta es una advertencia.</p>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-warning" data-bs-dismiss="modal">Aceptar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="confirmModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0">
+                <div class="modal-header bg-info text-white border-0">
+                    <h5 class="modal-title">
+                        <i class="fas fa-question-circle me-2"></i>
+                        <span id="confirmTitle">Confirmar Acción</span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0" id="confirmMessage">¿Estás seguro de realizar esta acción?</p>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-info" id="confirmButton">Confirmar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

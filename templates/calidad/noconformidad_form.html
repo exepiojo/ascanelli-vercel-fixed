@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nueva No Conformidad - Sistema de Gestión de Calidad</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('calidad_noconformidades') }}">
+                <i class="fas fa-arrow-left me-2"></i>Nueva No Conformidad
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a href="{{ url_for('logout') }}" class="nav-link">
+                    <i class="fas fa-sign-out-alt"></i> Salir
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Registrar Nueva No Conformidad</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" enctype="multipart/form-data" id="ncForm">
+                            <!-- Información Básica -->
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label">Título *</label>
+                                    <input type="text" class="form-control" name="titulo" required 
+                                           placeholder="Ej: Falta de EPP en área de soldadura">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Gravedad *</label>
+                                    <select class="form-select" name="gravedad" required>
+                                        <option value="">Seleccionar gravedad</option>
+                                        <option value="LEVE">Leve</option>
+                                        <option value="MODERADO">Moderado</option>
+                                        <option value="GRAVE">Grave</option>
+                                        <option value="CRITICO">Crítico</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label">Tipo *</label>
+                                    <select class="form-select" name="tipo" required>
+                                        <option value="">Seleccionar tipo</option>
+                                        <option value="PRODUCTO">Producto</option>
+                                        <option value="PROCESO">Proceso</option>
+                                        <option value="DOCUMENTO">Documento</option>
+                                        <option value="SEGURIDAD">Seguridad</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Fuente de Detección *</label>
+                                    <select class="form-select" name="fuente_deteccion" required>
+                                        <option value="">Seleccionar fuente</option>
+                                        <option value="AUDITORIA">Auditoría</option>
+                                        <option value="INSPECCION">Inspección</option>
+                                        <option value="QUEJA">Queja</option>
+                                        <option value="RECLAMO">Reclamo</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Descripción -->
+                            <div class="mb-4">
+                                <label class="form-label">Descripción Detallada *</label>
+                                <textarea class="form-control" name="descripcion" rows="4" required
+                                          placeholder="Describa detalladamente la no conformidad detectada..."></textarea>
+                            </div>
+
+                            <!-- Impacto -->
+                            <div class="mb-4">
+                                <label class="form-label">Impacto Potencial</label>
+                                <textarea class="form-control" name="impacto" rows="3"
+                                          placeholder="Describa el impacto potencial de esta no conformidad..."></textarea>
+                            </div>
+
+                            <!-- Plan Asociado -->
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label">Plan de Producción Asociado</label>
+                                    <select class="form-select" name="plan_id">
+                                        <option value="">Sin plan específico</option>
+                                        {% for plan in planes %}
+                                        <option value="{{ plan.id }}">
+                                            {{ plan.nro_chasis }} - {{ plan.implemento }} {{ plan.modelo }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Responsable de Análisis</label>
+                                    <input type="text" class="form-control" name="responsable_analisis"
+                                           placeholder="Nombre del responsable">
+                                </div>
+                            </div>
+
+                            <!-- Fecha Límite -->
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label">Fecha Límite para Análisis</label>
+                                    <input type="date" class="form-control" name="fecha_limite_analisis">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Sector</label>
+                                    <input type="text" class="form-control" name="sector" value="{{ current_user.sector }}" readonly>
+                                </div>
+                            </div>
+
+                            <!-- Evidencia -->
+                            <div class="mb-4">
+                                <label class="form-label">Evidencia (Foto/Documento)</label>
+                                <input type="file" class="form-control" name="evidencia_inicial" 
+                                       accept="image/*,.pdf,.doc,.docx">
+                                <small class="text-muted">Adjunte fotos o documentos que evidencien la no conformidad</small>
+                            </div>
+
+                            <!-- Resumen -->
+                            <div class="card bg-light mb-4">
+                                <div class="card-body">
+                                    <h6 class="mb-3">Resumen de la No Conformidad</h6>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <p class="mb-1"><strong>Código:</strong> <span id="codigoPreview">NC-2026-XXX</span></p>
+                                            <p class="mb-1"><strong>Detectado por:</strong> {{ current_user.nombre }}</p>
+                                            <p class="mb-1"><strong>Sector:</strong> {{ current_user.sector }}</p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <p class="mb-1"><strong>Fecha:</strong> <span id="fechaPreview"></span></p>
+                                            <p class="mb-1"><strong>Estado inicial:</strong> ABIERTA</p>
+                                            <p class="mb-1"><strong>Prioridad:</strong> <span id="prioridadPreview">-</span></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Botones -->
+                            <div class="d-flex justify-content-between">
+                                <a href="{{ url_for('calidad_noconformidades') }}" class="btn btn-secondary">
+                                    <i class="fas fa-times me-1"></i>Cancelar
+                                </a>
+                                <button type="submit" class="btn btn-danger">
+                                    <i class="fas fa-save me-1"></i>Registrar No Conformidad
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Actualizar preview en tiempo real
+        function actualizarPreview() {
+            const gravedad = document.querySelector('select[name="gravedad"]').value;
+            const titulo = document.querySelector('input[name="titulo"]').value;
+            
+            // Actualizar código (simulado)
+            const year = new Date().getFullYear();
+            const randomNum = Math.floor(Math.random() * 900) + 100;
+            document.getElementById('codigoPreview').textContent = `NC-${year}-${randomNum}`;
+            
+            // Actualizar fecha
+            const hoy = new Date();
+            document.getElementById('fechaPreview').textContent = hoy.toLocaleDateString('es-AR');
+            
+            // Actualizar prioridad según gravedad
+            const prioridadMap = {
+                'LEVE': 'BAJA',
+                'MODERADO': 'MEDIA', 
+                'GRAVE': 'ALTA',
+                'CRITICO': 'URGENTE'
+            };
+            document.getElementById('prioridadPreview').textContent = prioridadMap[gravedad] || '-';
+        }
+
+        // Validación del formulario
+        document.getElementById('ncForm').addEventListener('submit', function(e) {
+            const gravedad = document.querySelector('select[name="gravedad"]').value;
+            const titulo = document.querySelector('input[name="titulo"]').value.trim();
+            const descripcion = document.querySelector('textarea[name="descripcion"]').value.trim();
+            
+            if (!gravedad || !titulo || !descripcion) {
+                e.preventDefault();
+                alert('Complete todos los campos obligatorios');
+                return;
+            }
+            
+            // Confirmación según gravedad
+            let mensaje = '¿Está seguro de registrar esta no conformidad?';
+            if (gravedad === 'CRITICO') {
+                mensaje += '\n\n⚠️ Esta es una no conformidad CRÍTICA y generará notificaciones automáticas.';
+            } else if (gravedad === 'GRAVE') {
+                mensaje += '\n\n⚠️ Esta es una no conformidad GRAVE.';
+            }
+            
+            if (!confirm(mensaje)) {
+                e.preventDefault();
+            }
+        });
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            actualizarPreview();
+            
+            document.querySelector('select[name="gravedad"]').addEventListener('change', actualizarPreview);
+            document.querySelector('input[name="titulo"]').addEventListener('input', actualizarPreview);
+        });
+    </script>
+</body>
+</html>

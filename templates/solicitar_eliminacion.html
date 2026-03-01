@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Solicitar Eliminación de Pedido - Ascanelli</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <link rel="shortcut icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .ventas-header {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 20px 0;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        }
+        .card {
+            border-radius: 15px;
+            border: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .btn {
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="ventas-header">
+        <div class="container-fluid">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h1 class="h3 mb-0">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        Solicitar Eliminación de Pedido
+                    </h1>
+                </div>
+                <div class="col-auto">
+                    <a href="{{ url_for('admin_ventas') }}" class="btn btn-light">
+                        <i class="bi bi-arrow-left me-1"></i> Volver a Ventas
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Content -->
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="card-title">
+                            <i class="bi bi-info-circle me-2"></i>
+                            Información del Pedido
+                        </h4>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Pedido:</strong> {{ pedido.pedido }}</p>
+                                <p><strong>Cliente:</strong> {{ pedido.cliente }}</p>
+                                <p><strong>Modelo:</strong> {{ pedido.modelo }}</p>
+                                <p><strong>Estado:</strong> 
+                                    <span class="badge badge-{{ 'warning' if pedido.estado == 'ASIGNADO' else 'info' }}">
+                                        {{ pedido.estado.replace('_', ' ') }}
+                                    </span>
+                                </p>
+                            </div>
+                            <div class="col-md-6">
+                                <h5><i class="bi bi-truck me-2"></i>Chasis Asignado</h5>
+                                <p><strong>Número:</strong> {{ chasis_asignado.nro_chasis }}</p>
+                                <p><strong>Modelo:</strong> {{ chasis_asignado.modelo }}</p>
+                                <p><strong>Cliente:</strong> {{ chasis_asignado.cliente }}</p>
+                                <p><strong>Tubo:</strong> {{ chasis_asignado.tubo or 'N/A' }}</p>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <form method="POST">
+                            <div class="form-group mb-3">
+                                <label for="motivo" class="form-label">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>
+                                    Motivo de la Eliminación:
+                                </label>
+                                <textarea class="form-control" id="motivo" name="motivo" rows="4" required
+                                          placeholder="Especifique el motivo de la eliminación del pedido..."></textarea>
+                                <small class="form-text text-muted">
+                                    Describa por qué necesita eliminar este pedido (ej: caída de ventas, cancelación del cliente, etc.)
+                                </small>
+                            </div>
+                            
+                            <div class="form-group mb-3">
+                                <div class="alert alert-warning">
+                                    <h6><i class="bi bi-exclamation-triangle me-1"></i> Información Importante:</h6>
+                                    <ul class="mb-0">
+                                        <li>Esta solicitud será revisada por el departamento de PCP</li>
+                                        <li>PCP evaluará el impacto de la eliminación en la producción</li>
+                                        <li>Si se aprueba, PCP desasignará el chasis del pedido</li>
+                                        <li>Una vez desasignado, podrá eliminar el pedido definitivamente</li>
+                                        <li>El chasis quedará disponible para otros pedidos</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group mb-3">
+                                <div class="alert alert-danger">
+                                    <h6><i class="bi bi-trash me-1"></i> Advertencia:</h6>
+                                    <p class="mb-0">
+                                        <strong>Esta acción no se puede deshacer.</strong> Una vez que PCP apruebe la eliminación 
+                                        y desasigna el chasis, el pedido quedará disponible para eliminación definitiva.
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <button type="submit" class="btn btn-danger me-2">
+                                    <i class="bi bi-trash me-1"></i> Solicitar Eliminación
+                                </button>
+                                <a href="{{ url_for('admin_ventas') }}" class="btn btn-secondary">
+                                    <i class="bi bi-x-circle me-1"></i> Cancelar
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

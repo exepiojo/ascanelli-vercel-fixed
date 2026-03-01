@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KPIs - Sistema de Gestión de Calidad</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .kpi-card {
+            transition: transform 0.2s;
+            border-left: 4px solid;
+        }
+        .kpi-card:hover {
+            transform: translateY(-2px);
+        }
+        .kpi-calidad { border-left-color: #28a745; }
+        .kpi-produccion { border-left-color: #17a2b8; }
+        .kpi-seguridad { border-left-color: #ffc107; }
+        .kpi-satisfaccion { border-left-color: #fd7e14; }
+        
+        .cumple-badge {
+            font-size: 0.8rem;
+        }
+        
+        .chart-container {
+            height: 250px;
+            position: relative;
+        }
+        
+        .valor-actual {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        
+        .valor-objetivo {
+            font-size: 1.2rem;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('calidad_dashboard') }}">
+                <i class="fas fa-arrow-left me-2"></i>KPIs y Métricas
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a href="{{ url_for('logout') }}" class="nav-link">
+                    <i class="fas fa-sign-out-alt"></i> Salir
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1 class="h3 mb-0">Indicadores Clave de Rendimiento</h1>
+                        <p class="text-muted mb-0">Seguimiento de métricas de calidad y desempeño</p>
+                    </div>
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-success" onclick="medirTodos()">
+                            <i class="fas fa-plus me-1"></i>Medir Todos
+                        </button>
+                        <button class="btn btn-primary" onclick="exportarReporte()">
+                            <i class="fas fa-download me-1"></i>Exportar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resumen General -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h4 class="text-primary">{{ kpis_data|length }}</h4>
+                        <small class="text-muted">Total KPIs</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h4 class="text-success">{{ kpis_data|selectattr('cumple')|list|length }}</h4>
+                        <small class="text-muted">Cumplen Objetivo</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h4 class="text-warning">{{ kpis_data|selectattr('cumple')|list|length }}</h4>
+                        <small class="text-muted">No Cumplen</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h4 class="text-info">{{ kpis_data|selectattr('ultima_medicion')|list|length }}</h4>
+                        <small class="text-muted">Con Mediciones</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <label class="form-label">Categoría</label>
+                                <select class="form-select" id="filtroCategoria">
+                                    <option value="">Todas las categorías</option>
+                                    <option value="CALIDAD">Calidad</option>
+                                    <option value="PRODUCCION">Producción</option>
+                                    <option value="SEGURIDAD">Seguridad</option>
+                                    <option value="SATISFACCION">Satisfacción</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Frecuencia</label>
+                                <select class="form-select" id="filtroFrecuencia">
+                                    <option value="">Todas las frecuencias</option>
+                                    <option value="DIARIO">Diario</option>
+                                    <option value="SEMANAL">Semanal</option>
+                                    <option value="MENSUAL">Mensual</option>
+                                    <option value="TRIMESTRAL">Trimestral</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Estado</label>
+                                <select class="form-select" id="filtroEstado">
+                                    <option value="">Todos los estados</option>
+                                    <option value="ACTIVO">Activo</option>
+                                    <option value="INACTIVO">Inactivo</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Período</label>
+                                <select class="form-select" id="filtroPeriodo">
+                                    <option value="actual">Período actual</option>
+                                    <option value="ultimo">Último mes</option>
+                                    <option value="trimestre">Último trimestre</option>
+                                    <option value="año">Último año</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de KPIs -->
+        <div class="row">
+            {% for kpi_data in kpis_data %}
+            <div class="col-lg-6 mb-4 kpi-item" 
+                 data-categoria="{{ kpi_data.kpi.categoria }}" 
+                 data-frecuencia="{{ kpi_data.kpi.frecuencia }}" 
+                 data-estado="{{ kpi_data.kpi.estado }}">
+                <div class="card kpi-card kpi-{{ kpi_data.kpi.categoria.lower() }} h-100">
+                    <div class="card-header d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <h6 class="mb-0">{{ kpi_data.kpi.codigo }}</h6>
+                                <span class="badge bg-primary">{{ kpi_data.kpi.categoria }}</span>
+                                <span class="badge bg-secondary">{{ kpi_data.kpi.frecuencia }}</span>
+                            </div>
+                            <h5 class="mb-1">{{ kpi_data.kpi.nombre }}</h5>
+                            <small class="text-muted">{{ kpi_data.kpi.descripcion }}</small>
+                        </div>
+                        <div class="text-end">
+                            {% if kpi_data.ultima_medicion %}
+                                {% if kpi_data.cumple %}
+                                <span class="badge bg-success cumple-badge">Cumple</span>
+                                {% else %}
+                                <span class="badge bg-danger cumple-badge">No Cumple</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="badge bg-secondary">Sin medición</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        {% if kpi_data.ultima_medicion %}
+                        <div class="row text-center mb-3">
+                            <div class="col-6">
+                                <div class="valor-actual {{ 'text-success' if kpi_data.cumple else 'text-danger' }}">
+                                    {{ kpi_data.ultima_medicion.valor }} {{ kpi_data.kpi.unidad }}
+                                </div>
+                                <small class="text-muted">Valor Actual</small>
+                            </div>
+                            <div class="col-6">
+                                <div class="valor-objetivo">
+                                    {{ kpi_data.kpi.objetivo }} {{ kpi_data.kpi.unidad }}
+                                </div>
+                                <small class="text-muted">Objetivo</small>
+                            </div>
+                        </div>
+
+                        <!-- Mini gráfico -->
+                        <div class="chart-container mb-3">
+                            <canvas id="chart_{{ kpi_data.kpi.id }}"></canvas>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <small class="text-muted">Última medición:</small><br>
+                                <strong>{{ kpi_data.ultima_medicion.fecha.strftime('%d/%m/%Y') }}</strong>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted">Responsable:</small><br>
+                                <strong>{{ kpi_data.kpi.responsable }}</strong>
+                            </div>
+                        </div>
+
+                        {% if kpi_data.ultima_medicion.comentarios %}
+                        <div class="mb-2">
+                            <small class="text-muted">Comentarios:</small><br>
+                            <span class="small">{{ kpi_data.ultima_medicion.comentarios[:50] }}{% if kpi_data.ultima_medicion.comentarios|length > 50 %}...{% endif %}</span>
+                                </div>
+                        {% endif %}
+                        {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-chart-line fa-3x text-muted mb-2"></i>
+                            <p class="text-muted">No hay mediciones registradas</p>
+                        </div>
+                        {% endif %}
+
+                        <div class="d-flex justify-content-between">
+                            <div class="btn-group" role="group">
+                                <a href="{{ url_for('calidad_kpi_medir', kpi_id=kpi_data.kpi.id) }}" class="btn btn-success btn-sm">
+                                    <i class="fas fa-plus me-1"></i>Medir
+                                </a>
+                                <button class="btn btn-outline-primary btn-sm" onclick="verHistorial({{ kpi_data.kpi.id }})">
+                                    <i class="fas fa-history me-1"></i>Historial
+                                </button>
+                            </div>
+                            <div class="btn-group" role="group">
+                                <button class="btn btn-outline-warning btn-sm">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-outline-info btn-sm" onclick="configurarAlertas({{ kpi_data.kpi.id }})">
+                                    <i class="fas fa-bell"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Modal Historial -->
+    <div class="modal fade" id="historialModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Historial de Mediciones</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="historialContent">
+                        <!-- Historial dinámico -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Datos simulados de mediciones (en producción vendrían de la BD)
+        const medicionesData = {
+            {% for kpi_data in kpis_data %}
+            {{ kpi_data.kpi.id }}: [
+                {% if kpi_data.ultima_medicion %}
+                {
+                    fecha: "{{ kpi_data.ultima_medicion.fecha.strftime('%d/%m/%Y') }}",
+                    valor: {{ kpi_data.ultima_medicion.valor }},
+                    objetivo: {{ kpi_data.kpi.objetivo }}
+                }
+                {% endif %}
+            ]{% if not loop.last %},{% endif %}
+            {% endfor %}
+        };
+
+        // Crear mini gráficos
+        function crearMiniChart(kpiId, canvasId) {
+            const mediciones = medicionesData[kpiId] || [];
+            const canvas = document.getElementById(canvasId);
+            
+            if (mediciones.length === 0) {
+                return;
+            }
+
+            new Chart(canvas, {
+                type: 'line',
+                data: {
+                    labels: mediciones.map(m => m.fecha),
+                    datasets: [{
+                        label: 'Valor',
+                        data: mediciones.map(m => m.valor),
+                        borderColor: '#007bff',
+                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }, {
+                        label: 'Objetivo',
+                        data: mediciones.map(m => m.objetivo),
+                        borderColor: '#28a745',
+                        borderDash: [5, 5],
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false
+                        }
+                    }
+                }
+            });
+        }
+
+        function verHistorial(kpiId) {
+            const mediciones = medicionesData[kpiId] || [];
+            const historialContent = document.getElementById('historialContent');
+            
+            if (mediciones.length === 0) {
+                historialContent.innerHTML = '<p class="text-muted">No hay mediciones registradas</p>';
+            } else {
+                let html = '<div class="table-responsive"><table class="table table-sm">';
+                html += '<thead><tr><th>Fecha</th><th>Valor</th><th>Objetivo</th><th>Cumplimiento</th></tr></thead><tbody>';
+                
+                mediciones.forEach(medicion => {
+                    const cumple = medicion.valor >= medicion.objetivo;
+                    html += `
+                        <tr>
+                            <td>${medicion.fecha}</td>
+                            <td><strong>${medicion.valor}</strong></td>
+                            <td>${medicion.objetivo}</td>
+                            <td>
+                                ${cumple ? 
+                                    '<span class="badge bg-success">Cumple</span>' : 
+                                    '<span class="badge bg-danger">No Cumple</span>'}
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</tbody></table></div>';
+                historialContent.innerHTML = html;
+            }
+            
+            new bootstrap.Modal(document.getElementById('historialModal')).show();
+        }
+
+        function medirTodos() {
+            alert('Función para medir todos los KPIs - En desarrollo');
+        }
+
+        function exportarReporte() {
+            alert('Función de exportación - En desarrollo');
+        }
+
+        function configurarAlertas(kpiId) {
+            alert(`Configurar alertas para KPI ${kpiId} - En desarrollo`);
+        }
+
+        // Filtros
+        function aplicarFiltros() {
+            const categoria = document.getElementById('filtroCategoria').value;
+            const frecuencia = document.getElementById('filtroFrecuencia').value;
+            const estado = document.getElementById('filtroEstado').value;
+            
+            const items = document.querySelectorAll('.kpi-item');
+            
+            items.forEach(item => {
+                let mostrar = true;
+                
+                if (categoria && item.dataset.categoria !== categoria) mostrar = false;
+                if (frecuencia && item.dataset.frecuencia !== frecuencia) mostrar = false;
+                if (estado && item.dataset.estado !== estado) mostrar = false;
+                
+                item.style.display = mostrar ? 'block' : 'none';
+            });
+        }
+
+        // Event listeners
+        document.getElementById('filtroCategoria').addEventListener('change', aplicarFiltros);
+        document.getElementById('filtroFrecuencia').addEventListener('change', aplicarFiltros);
+        document.getElementById('filtroEstado').addEventListener('change', aplicarFiltros);
+
+        // Inicializar gráficos
+        document.addEventListener('DOMContentLoaded', function() {
+            {% for kpi_data in kpis_data %}
+            crearMiniChart({{ kpi_data.kpi.id }}, 'chart_{{ kpi_data.kpi.id }}');
+            {% endfor %}
+        });
+    </script>
+</body>
+</html>

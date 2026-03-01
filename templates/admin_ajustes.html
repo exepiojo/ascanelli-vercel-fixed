@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ajustes - Ascanelli</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+  <link rel="shortcut icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+  <style>
+    :root {
+      --bg: #ffffff;
+      --card: #f8f9fa;
+      --accent: #212529;
+      --success: #198754;
+      --danger: #dc3545;
+      --muted: #6c757d;
+      --border: #dee2e6;
+    }
+    html, body {
+      height: 100%;
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      background: var(--bg);
+      color: var(--accent);
+    }
+    body {
+      padding: 20px;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .btn-back {
+      background: var(--muted);
+      color: white;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      text-decoration: none;
+      font-size: 14px;
+    }
+    .btn-back:hover {
+      background: #5a6268;
+    }
+    .section {
+      background: var(--card);
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    h2 {
+      font-size: 18px;
+      margin-top: 0;
+      border-bottom: 2px solid var(--accent);
+      padding-bottom: 10px;
+    }
+    .form-group {
+      margin-bottom: 12px;
+    }
+    label {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+    input[type="text"],
+    input[type="password"],
+    select {
+      width: 100%;
+      padding: 10px 8px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(33, 37, 41, 0.1);
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 600px) {
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+    }
+    .btn-submit {
+      background: var(--accent);
+      color: white;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      width: 100%;
+    }
+    .btn-submit:hover {
+      background: #1a1d21;
+    }
+    .alert {
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin-bottom: 12px;
+      font-size: 14px;
+    }
+    .alert-success {
+      background: #d1e7dd;
+      color: #0f5132;
+      border: 1px solid #badbcc;
+    }
+    .alert-danger {
+      background: #f8d7da;
+      color: #842029;
+      border: 1px solid #f5c2c7;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+    }
+    th {
+      background: var(--accent);
+      color: white;
+      padding: 10px 8px;
+      text-align: left;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    td {
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+    }
+    tr:hover {
+      background: #f0f0f0;
+    }
+    .actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .btn-sm {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      color: white;
+    }
+    .btn-edit {
+      background: #0d6efd;
+    }
+    .btn-edit:hover {
+      background: #0b5ed7;
+    }
+    .btn-delete {
+      background: var(--danger);
+    }
+    .btn-delete:hover {
+      background: #bb2d3b;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.4);
+    }
+    .modal.active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-content {
+      background: white;
+      padding: 24px;
+      border-radius: 8px;
+      max-width: 500px;
+      width: 90%;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    .modal-close {
+      float: right;
+      font-size: 24px;
+      cursor: pointer;
+      color: var(--muted);
+    }
+    .modal-close:hover {
+      color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>
+      Ajustes
+      <a href="/" class="btn-back">← Volver</a>
+    </h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- Sección: Crear Usuario -->
+    <div class="section">
+      <h2>➕ Crear Nuevo Usuario</h2>
+      <form method="post" action="/admin/usuario/crear">
+        <div class="form-row">
+          <div class="form-group">
+            <label>PIN (4 dígitos)</label>
+            <input type="text" name="pin" placeholder="Ej: 1234" maxlength="4" pattern="[0-9]{4}" required>
+          </div>
+          <div class="form-group">
+            <label>Nombre Completo</label>
+            <input type="text" name="nombre" placeholder="Ej: Juan García" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Sector</label>
+            <select name="sector" required>
+              <option value="">-- Seleccionar --</option>
+              {% for sector in sectores %}
+                <option value="{{ sector }}">{{ sector }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Rol</label>
+            <select name="rol" required>
+              {% for rol in roles %}
+                <option value="{{ rol }}" {% if rol == 'OPERARIO' %}selected{% endif %}>{{ rol }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <button type="submit" class="btn-submit">Crear Usuario</button>
+      </form>
+    </div>
+
+    <!-- Sección: Listado de Usuarios -->
+    <div class="section">
+      <h2>👥 Usuarios Creados</h2>
+      {% if usuarios %}
+        <table>
+          <thead>
+            <tr>
+              <th>PIN</th>
+              <th>Nombre</th>
+              <th>Sector</th>
+              <th>Rol</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for user in usuarios %}
+              <tr>
+                <td><strong>{{ user.pin }}</strong></td>
+                <td>{{ user.nombre }}</td>
+                <td>{{ user.sector }}</td>
+                <td><span style="background: var(--accent); color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px;">{{ user.rol }}</span></td>
+                <td>
+                  <div class="actions">
+                    <button class="btn-sm btn-edit" onclick="openEditModal({{ user.id }}, '{{ user.nombre }}', '{{ user.sector }}', '{{ user.rol }}')">Editar</button>
+                    {% if user.id != current_user.id %}
+                      <form method="post" action="/admin/usuario/{{ user.id }}/eliminar" style="display: inline;">
+                        <button type="submit" class="btn-sm btn-delete" onclick="return confirm('¿Eliminar usuario {{ user.nombre }}?')">Eliminar</button>
+                      </form>
+                    {% else %}
+                      <span style="color: var(--muted); font-size: 12px;">(Actual)</span>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p style="color: var(--muted); text-align: center; padding: 20px;">No hay usuarios creados aún.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Modal: Editar Usuario -->
+  <div id="editModal" class="modal">
+    <div class="modal-content">
+      <span class="modal-close" onclick="closeEditModal()">&times;</span>
+      <h2 style="margin-top: 0;">Editar Usuario</h2>
+      <form id="editForm" method="post">
+        <div class="form-group">
+          <label>Nombre Completo</label>
+          <input type="text" id="editNombre" name="nombre" required>
+        </div>
+        <div class="form-group">
+          <label>Sector</label>
+          <select id="editSector" name="sector" required>
+            <option value="">-- Seleccionar --</option>
+            {% for sector in sectores %}
+              <option value="{{ sector }}">{{ sector }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Rol</label>
+          <select id="editRol" name="rol" required>
+            {% for rol in roles %}
+              <option value="{{ rol }}">{{ rol }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button type="submit" class="btn-submit">Guardar Cambios</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function openEditModal(userId, nombre, sector, rol) {
+      document.getElementById('editNombre').value = nombre;
+      document.getElementById('editSector').value = sector;
+      document.getElementById('editRol').value = rol;
+      document.getElementById('editForm').action = `/admin/usuario/${userId}/editar`;
+      document.getElementById('editModal').classList.add('active');
+    }
+    function closeEditModal() {
+      document.getElementById('editModal').classList.remove('active');
+    }
+    window.onclick = function(event) {
+      const modal = document.getElementById('editModal');
+      if (event.target === modal) {
+        closeEditModal();
+      }
+    }
+  </script>
+</body>
+</html>

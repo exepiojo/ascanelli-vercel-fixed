@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nuevo Documento - Sistema de Gestión de Calidad</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('calidad_documentos') }}">
+                <i class="fas fa-arrow-left me-2"></i>Nuevo Documento
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a href="{{ url_for('logout') }}" class="nav-link">
+                    <i class="fas fa-sign-out-alt"></i> Salir
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Subir Nuevo Documento</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" enctype="multipart/form-data" id="documentoForm">
+                            <!-- Información Básica -->
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label">Título *</label>
+                                    <input type="text" class="form-control" name="titulo" required 
+                                           placeholder="Ej: Procedimiento de Control de Calidad">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Tipo *</label>
+                                    <select class="form-select" name="tipo" required onchange="actualizarCodigo()">
+                                        <option value="">Seleccionar tipo</option>
+                                        <option value="POE">POE (Procedimiento Operativo Estándar)</option>
+                                        <option value="PROCESO">Proceso</option>
+                                        <option value="REGISTRO">Registro</option>
+                                        <option value="FORMATO">Formato</option>
+                                        <option value="MANUAL">Manual</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="row mb-4">
+                                <div class="col-md-4">
+                                    <label class="form-label">Versión *</label>
+                                    <input type="text" class="form-control" name="version" required 
+                                           value="v1.0" placeholder="Ej: v1.0">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Categoría *</label>
+                                    <select class="form-select" name="categoria" required>
+                                        <option value="">Seleccionar categoría</option>
+                                        <option value="CALIDAD">Calidad</option>
+                                        <option value="SEGURIDAD">Seguridad</option>
+                                        <option value="PRODUCCION">Producción</option>
+                                        <option value="MANTENIMIENTO">Mantenimiento</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Sector</label>
+                                    <select class="form-select" name="sector">
+                                        <option value="">General</option>
+                                        <option value="PRODUCCION">Producción</option>
+                                        <option value="CALIDAD">Calidad</option>
+                                        <option value="SOLDADURA">Soldadura</option>
+                                        <option value="PINTURA">Pintura</option>
+                                        <option value="MONTAJE">Montaje</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Descripción -->
+                            <div class="mb-4">
+                                <label class="form-label">Descripción</label>
+                                <textarea class="form-control" name="descripcion" rows="3"
+                                          placeholder="Describa el propósito y alcance del documento..."></textarea>
+                            </div>
+
+                            <!-- Archivo -->
+                            <div class="mb-4">
+                                <label class="form-label">Archivo *</label>
+                                <input type="file" class="form-control" name="archivo" required 
+                                       accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx">
+                                <small class="text-muted">Formatos aceptados: PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX</small>
+                            </div>
+
+                            <!-- Fechas -->
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label">Fecha de Vigencia</label>
+                                    <input type="date" class="form-control" name="fecha_vigencia">
+                                    <small class="text-muted">Fecha a partir de la cual el documento estará vigente</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Próxima Revisión</label>
+                                    <input type="date" class="form-control" name="proxima_revision">
+                                    <small class="text-muted">Fecha sugerida para próxima revisión</small>
+                                </div>
+                            </div>
+
+                            <!-- Aprobación -->
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label">Revisado por</label>
+                                    <input type="text" class="form-control" name="revisado_por"
+                                           placeholder="Nombre del revisor">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Aprobado por</label>
+                                    <input type="text" class="form-control" name="aprobado_por"
+                                           placeholder="Nombre del aprobador">
+                                </div>
+                            </div>
+
+                            <!-- Distribución -->
+                            <div class="mb-4">
+                                <label class="form-label">Distribución</label>
+                                <textarea class="form-control" name="distribucion" rows="2"
+                                          placeholder="Lista de personas o sectores que deben recibir este documento..."></textarea>
+                                <small class="text-muted">Ej: Todos los sectores, Producción, Calidad, Mantenimiento</small>
+                            </div>
+
+                            <!-- Opciones -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="obligatorio" id="obligatorio">
+                                        <label class="form-check-label" for="obligatorio">
+                                            <strong>Documento obligatorio</strong> - Debe ser conocido por todo el personal relevante
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Resumen -->
+                            <div class="card bg-light mb-4">
+                                <div class="card-body">
+                                    <h6 class="mb-3">Resumen del Documento</h6>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <p class="mb-1"><strong>Código:</strong> <span id="codigoPreview">XXXX-XXX</span></p>
+                                            <p class="mb-1"><strong>Creado por:</strong> {{ current_user.nombre }}</p>
+                                            <p class="mb-1"><strong>Estado inicial:</strong> BORRADOR</p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <p class="mb-1"><strong>Fecha:</strong> <span id="fechaPreview"></span></p>
+                                            <p class="mb-1"><strong>Versión:</strong> <span id="versionPreview">v1.0</span></p>
+                                            <p class="mb-1"><strong>Tipo:</strong> <span id="tipoPreview">-</span></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Botones -->
+                            <div class="d-flex justify-content-between">
+                                <a href="{{ url_for('calidad_documentos') }}" class="btn btn-secondary">
+                                    <i class="fas fa-times me-1"></i>Cancelar
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-upload me-1"></i>Subir Documento
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let contadorCodigos = {
+            'POE': 1,
+            'PROCESO': 1,
+            'REGISTRO': 1,
+            'FORMATO': 1,
+            'MANUAL': 1
+        };
+
+        function actualizarCodigo() {
+            const tipo = document.querySelector('select[name="tipo"]').value;
+            const version = document.querySelector('input[name="version"]').value;
+            
+            if (tipo) {
+                // Simular contador (en producción vendría de la BD)
+                const codigo = `${tipo}-${String(contadorCodigos[tipo]).padStart(3, '0')}`;
+                document.getElementById('codigoPreview').textContent = codigo;
+                document.getElementById('tipoPreview').textContent = tipo;
+            } else {
+                document.getElementById('codigoPreview').textContent = 'XXXX-XXX';
+                document.getElementById('tipoPreview').textContent = '-';
+            }
+            
+            document.getElementById('versionPreview').textContent = version || 'v1.0';
+        }
+
+        function actualizarPreview() {
+            const hoy = new Date();
+            document.getElementById('fechaPreview').textContent = hoy.toLocaleDateString('es-AR');
+            
+            const version = document.querySelector('input[name="version"]').value;
+            document.getElementById('versionPreview').textContent = version || 'v1.0';
+        }
+
+        // Validación del formulario
+        document.getElementById('documentoForm').addEventListener('submit', function(e) {
+            const titulo = document.querySelector('input[name="titulo"]').value.trim();
+            const tipo = document.querySelector('select[name="tipo"]').value;
+            const version = document.querySelector('input[name="version"]').value.trim();
+            const archivo = document.querySelector('input[name="archivo"]').files[0];
+            
+            if (!titulo || !tipo || !version || !archivo) {
+                e.preventDefault();
+                alert('Complete todos los campos obligatorios');
+                return;
+            }
+            
+            // Validar tipo de archivo
+            const tiposPermitidos = ['application/pdf', 'application/msword', 
+                                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                                    'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                                    'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation'];
+            
+            if (!tiposPermitidos.includes(archivo.type)) {
+                e.preventDefault();
+                alert('Tipo de archivo no permitido. Solo se aceptan PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX');
+                return;
+            }
+            
+            // Validar tamaño (máximo 10MB)
+            if (archivo.size > 10 * 1024 * 1024) {
+                e.preventDefault();
+                alert('El archivo no puede superar los 10MB');
+                return;
+            }
+            
+            // Confirmación
+            if (!confirm('¿Está seguro de subir este documento?')) {
+                e.preventDefault();
+            }
+        });
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            actualizarPreview();
+            actualizarCodigo();
+            
+            document.querySelector('select[name="tipo"]').addEventListener('change', actualizarCodigo);
+            document.querySelector('input[name="version"]').addEventListener('input', actualizarPreview);
+        });
+    </script>
+</body>
+</html>

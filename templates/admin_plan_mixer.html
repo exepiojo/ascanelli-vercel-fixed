@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Plan de Producción - Mixer {{ implemento }}</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <link rel="shortcut icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f4f7f6; }
+        .card { border-radius: 12px; border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.08); }
+        .table-responsive { max-height: 700px; overflow-y: auto; }
+        .header-section { background: #212529; color: white; padding: 20px; border-radius: 12px; margin-bottom: 25px; }
+        .conjunto-card { transition: transform 0.2s; border-left: 5px solid transparent; }
+        .conjunto-card:hover { transform: scale(1.02); }
+        .border-chasis { border-left-color: #007bff; }
+        .border-cuba { border-left-color: #28a745; }
+        .border-accesorios { border-left-color: #ffc107; }
+        .border-sin-fines { border-left-color: #dc3545; }
+        .btn-calidad-ver { background-color: #FFD700; color: black; font-weight: bold; border: none; }
+        .btn-calidad-ver:hover { background-color: #e6c200; }
+        .img-alerta { width: 100%; border-radius: 8px; cursor: pointer; transition: 0.3s; }
+        .img-alerta:hover { opacity: 0.8; }
+        .badge-responsable { font-size: 0.75rem; background-color: #e9ecef; color: #495057; padding: 4px 8px; border-radius: 4px; }
+        /* Estilos para el Modal de Eliminación Impactante */
+        .modal-delete .modal-content { border-radius: 15px; border: none; overflow: hidden; }
+        .modal-delete .modal-header { background-color: #d32f2f; color: white; border: none; }
+        .modal-delete .btn-confirm { background-color: #d32f2f; color: white; font-weight: bold; border: none; }
+    </style>
+</head>
+<body class="bg-light">
+
+<div class="container-fluid mt-4 px-4">
+    <div class="header-section d-flex justify-content-between align-items-center shadow">
+        <div>
+            <h2 class="mb-0">📊 Plan de Producción - MIXER {{ implemento }}</h2>
+            <p class="mb-0 opacity-75">Administración por conjuntos y semanas</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('admin_plan') }}" class="btn btn-outline-light fw-bold">← VOLVER</a>
+            <button class="btn btn-success fw-bold" data-bs-toggle="modal" data-bs-target="#modalCargaManual">+ AGREGAR FILA</button>
+            <button class="btn btn-outline-light fw-bold" data-bs-toggle="modal" data-bs-target="#modalExcel">📤 SUBIR EXCEL</button>
+        </div>
+    </div>
+
+    <!-- SEMANA ANTERIOR -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-danger text-white fw-bold">
+            📅 SEMANA ANTERIOR
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                {% for conjunto in conjuntos %}
+                <div class="col-md-3">
+                    <div class="card conjunto-card border-{{ conjunto.lower().replace(' ', '-') }} shadow-sm h-100">
+                        <div class="card-header bg-light">
+                            <h6 class="conjunto-title mb-0">{{ conjunto }}</h6>
+                        </div>
+                        <div class="card-body">
+                            {% set planes_semana = planes_anterior[conjunto] %}
+                            {% if planes_semana %}
+                                {% for plan in planes_semana %}
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="fw-bold text-primary">{{ plan.nro_chasis }}</span>
+                                        {% if plan.estado == 'TERMINADO' %}
+                                        <span class="badge bg-success">TERMINADO</span>
+                                        {% else %}
+                                        <span class="badge bg-warning text-dark">PENDIENTE</span>
+                                        {% endif %}
+                                    </div>
+                                    <small class="text-muted d-block">{{ plan.modelo }}</small>
+                                    <small class="text-muted d-block">{{ plan.fecha }}</small>
+                                    
+                                    {% if plan.estado != 'TERMINADO' %}
+                                    <div class="d-grid gap-2 mt-2">
+                                        <button type="button" class="btn btn-sm btn-primary btn-avance"
+                                                onclick="abrirModalConfirmacion('{{ plan.id }}', '{{ plan.nro_chasis }}', '{{ plan.modelo }}', '{{ conjunto }}')">
+                                            DAR AVANCE
+                                        </button>
+                                        <button onclick="abrirModalCalidad('{{ plan.id }}', '{{ plan.nro_chasis }}')" class="btn btn-sm btn-calidad">
+                                            ⚠️ CALIDAD
+                                        </button>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center text-muted py-3">
+                                    <small>No hay tareas para esta semana</small>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- SEMANA ACTUAL -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-success text-white fw-bold">
+            🎯 SEMANA ACTUAL
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                {% for conjunto in conjuntos %}
+                <div class="col-md-3">
+                    <div class="card conjunto-card border-{{ conjunto.lower().replace(' ', '-') }} shadow-sm h-100">
+                        <div class="card-header bg-light">
+                            <h6 class="conjunto-title mb-0">{{ conjunto }}</h6>
+                        </div>
+                        <div class="card-body">
+                            {% set planes_semana = planes_actual[conjunto] %}
+                            {% if planes_semana %}
+                                {% for plan in planes_semana %}
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="fw-bold text-primary">{{ plan.nro_chasis }}</span>
+                                        {% if plan.estado == 'TERMINADO' %}
+                                        <span class="badge bg-success">TERMINADO</span>
+                                        {% else %}
+                                        <span class="badge bg-warning text-dark">PENDIENTE</span>
+                                        {% endif %}
+                                    </div>
+                                    <small class="text-muted d-block">{{ plan.modelo }}</small>
+                                    <small class="text-muted d-block">{{ plan.fecha }}</small>
+                                    
+                                    {% if plan.estado != 'TERMINADO' %}
+                                    <div class="d-grid gap-2 mt-2">
+                                        <button type="button" class="btn btn-sm btn-primary btn-avance"
+                                                onclick="abrirModalConfirmacion('{{ plan.id }}', '{{ plan.nro_chasis }}', '{{ plan.modelo }}', '{{ conjunto }}')">
+                                            DAR AVANCE
+                                        </button>
+                                        <button onclick="abrirModalCalidad('{{ plan.id }}', '{{ plan.nro_chasis }}')" class="btn btn-sm btn-calidad">
+                                            ⚠️ CALIDAD
+                                        </button>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center text-muted py-3">
+                                    <small>No hay tareas para esta semana</small>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- SEMANA SIGUIENTE -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-info text-white fw-bold">
+            🔮 SEMANA SIGUIENTE
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                {% for conjunto in conjuntos %}
+                <div class="col-md-3">
+                    <div class="card conjunto-card border-{{ conjunto.lower().replace(' ', '-') }} shadow-sm h-100">
+                        <div class="card-header bg-light">
+                            <h6 class="conjunto-title mb-0">{{ conjunto }}</h6>
+                        </div>
+                        <div class="card-body">
+                            {% set planes_semana = planes_siguiente[conjunto] %}
+                            {% if planes_semana %}
+                                {% for plan in planes_semana %}
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="fw-bold text-primary">{{ plan.nro_chasis }}</span>
+                                        {% if plan.estado == 'TERMINADO' %}
+                                        <span class="badge bg-success">TERMINADO</span>
+                                        {% else %}
+                                        <span class="badge bg-warning text-dark">PENDIENTE</span>
+                                        {% endif %}
+                                    </div>
+                                    <small class="text-muted d-block">{{ plan.modelo }}</small>
+                                    <small class="text-muted d-block">{{ plan.fecha }}</small>
+                                    
+                                    {% if plan.estado != 'TERMINADO' %}
+                                    <div class="d-grid gap-2 mt-2">
+                                        <button type="button" class="btn btn-sm btn-primary btn-avance"
+                                                onclick="abrirModalConfirmacion('{{ plan.id }}', '{{ plan.nro_chasis }}', '{{ plan.modelo }}', '{{ conjunto }}')">
+                                            DAR AVANCE
+                                        </button>
+                                        <button onclick="abrirModalCalidad('{{ plan.id }}', '{{ plan.nro_chasis }}')" class="btn btn-sm btn-calidad">
+                                            ⚠️ CALIDAD
+                                        </button>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center text-muted py-3">
+                                    <small>No hay tareas para esta semana</small>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Confirmación Dar Avance -->
+<div class="modal fade" id="modalConfirmacion" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title fw-bold">✓ Confirmar Avance - <span id="conjuntoDisplay"></span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-warning mb-4" role="alert">
+                    <strong>⚠️ Atención:</strong> Está a punto de marcar el conjunto como terminado. Esta acción no se puede deshacer.
+                </div>
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <strong class="d-block text-muted small text-uppercase">Nro. Chasis</strong>
+                        <span id="confirmChasis" class="text-primary fw-bold" style="font-size: 1.3rem;"></span>
+                    </div>
+                </div>
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <strong class="d-block text-muted small text-uppercase">Modelo</strong>
+                        <span id="confirmModelo" class="text-dark fw-bold"></span>
+                    </div>
+                </div>
+                <div class="alert alert-info mb-0">
+                    <strong>¿Está seguro de que desea continuar?</strong>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">
+                    ✕ Cancelar
+                </button>
+                <a id="linkConfirmAvance" href="#" class="btn btn-success fw-bold px-5">
+                    ✓ SÍ, DAR AVANCE
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Calidad -->
+<div class="modal fade" id="modalCalidad" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form action="/operario/alerta_calidad" method="POST" enctype="multipart/form-data" class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold">⚠️ Alerta de Calidad: Chasis <span id="chasisDisplay"></span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" name="plan_id" id="planIdInput">
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Descripción de la Novedad</label>
+                    <textarea name="descripcion" class="form-control" rows="4" placeholder="Explique el problema detectado..." required></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Adjuntar Imagen / Tomar Foto</label>
+                    <input type="file" name="foto" class="form-control" accept="image/*" capture="environment">
+                    <small class="text-muted">Puede usar la cámara del dispositivo directamente.</small>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-warning fw-bold px-4">ENVIAR REPORTE</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: Carga Manual -->
+<div class="modal fade" id="modalCargaManual" tabindex="-1">
+    <div class="modal-dialog">
+        <form action="/admin/add_manual" method="POST" class="modal-content">
+            <div class="modal-header bg-primary text-white"><h5>Agregar Chasis Manual</h5></div>
+            <div class="modal-body">
+                <input type="text" name="nro_chasis" class="form-control mb-2" placeholder="Nro Chasis" required>
+                <input type="text" name="implemento" class="form-control mb-2" placeholder="Implemento" required>
+                <input type="text" name="modelo" class="form-control mb-2" placeholder="Modelo" required>
+                <input type="text" name="fecha" class="form-control mb-2" placeholder="Fecha (DD/MM/YYYY)" required>
+                <select name="conjunto" class="form-select mb-2" required>
+                    <option value="">Seleccionar Conjunto</option>
+                    <option value="CHASIS">CHASIS</option>
+                    <option value="CUBA">CUBA</option>
+                    <option value="ACCESORIOS">ACCESORIOS</option>
+                    <option value="SIN FINES">SIN FINES</option>
+                </select>
+            </div>
+            <div class="modal-footer"><button type="submit" class="btn btn-success">Guardar</button></div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: Excel -->
+<div class="modal fade" id="modalExcel" tabindex="-1">
+    <div class="modal-dialog">
+        <form action="/admin/upload" method="POST" enctype="multipart/form-data" class="modal-content">
+            <div class="modal-header"><h5>Subir Plan (Excel)</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body"><input type="file" name="file" class="form-control" accept=".xlsx, .xls" required></div>
+            <div class="modal-footer"><button type="submit" class="btn btn-primary">Cargar Archivo</button></div>
+        </form>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    function abrirModalConfirmacion(planId, nroChasis, modelo, conjunto) {
+        // Validar si es posible dar avance
+        fetch('/operario/validar_avance/' + planId)
+            .then(response => response.json())
+            .then(data => {
+                if (!data.valido) {
+                    alert('No se puede dar avance: ' + data.mensaje);
+                    return;
+                }
+                
+                // Si es válido, abrir el modal de confirmación
+                document.getElementById('confirmChasis').innerText = nroChasis;
+                document.getElementById('confirmModelo').innerText = modelo;
+                document.getElementById('conjuntoDisplay').innerText = conjunto;
+                document.getElementById('linkConfirmAvance').href = '/operario/dar_avance/' + planId;
+                
+                // Abrir el modal de confirmación
+                const modal = new bootstrap.Modal(document.getElementById('modalConfirmacion'));
+                modal.show();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error técnico: no se pudo validar el avance. Intente nuevamente.');
+            });
+    }
+
+    function abrirModalCalidad(planId, nroChasis) {
+        document.getElementById('planIdInput').value = planId;
+        document.getElementById('chasisDisplay').innerText = nroChasis;
+        
+        // Abrir el modal de calidad
+        const modalCalidad = new bootstrap.Modal(document.getElementById('modalCalidad'));
+        modalCalidad.show();
+    }
+</script>
+</body>
+</html>

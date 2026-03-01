@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Puesto {{ puesto_nombre }} - Ascanelli</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <link rel="shortcut icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .card-actual { border-left: 10px solid #ffc107; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .text-muted-custom { color: #6c757d; font-size: 0.9rem; }
+        .btn-confirmar { font-size: 1.5rem; font-weight: bold; padding: 20px; }
+        .card-calidad { border-left: 10px solid #dc3545; } /* Rojo para Calidad */
+    </style>
+</head>
+<body>
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-0">{{ puesto_nombre }}</h2>
+            <small class="text-muted">Operario: {{ current_user.nombre }}</small>
+        </div>
+        <a href="{{ url_for('seleccion_puesto') }}" class="btn btn-secondary btn-sm">Cambiar Puesto</a>
+    </div>
+
+    <div class="mb-4">
+        <h6 class="text-uppercase text-muted">Historial del Puesto (Últimos 5)</h6>
+        <ul class="list-group list-group-flush">
+            {% for reg in terminados %}
+            <li class="list-group-item bg-transparent text-muted-custom">
+                {{ reg.nro_chasis }} - {{ reg.modelo }} - <span class="text-success">OK ({{ reg.hora_fin.strftime('%H:%M') }})</span>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <div class="card card-actual mb-4">
+        <div class="card-body">
+            <h6 class="card-subtitle mb-2 text-warning fw-bold">SIGUIENTE A REGISTRAR</h6>
+            {% if actual %}
+                <h1 class="display-5 fw-bold">{{ actual.implemento }}</h1>
+                <h3 class="text-secondary">{{ actual.modelo }}</h3>
+                <h1 class="display-1 fw-bold text-dark">{{ actual.nro_chasis }}</h1>
+                
+                <form action="/finalizar_tarea/{{ actual.id }}" method="POST" class="mt-4">
+                    <button type="submit" class="btn btn-warning w-100 btn-confirmar">
+                        DECLARAR TERMINADO
+                    </button>
+                </form>
+            {% else %}
+                <div class="alert alert-info">No hay tareas pendientes en {{ puesto_nombre }}.</div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if actual %}
+    <div class="card card-calidad mb-4 shadow-sm">
+        <div class="card-body">
+            <h6 class="text-danger fw-bold">⚠️ ¿DETECTÓ ALGÚN PROBLEMA?</h6>
+            <form action="/calidad/registrar" method="POST" enctype="multipart/form-data" class="row g-2">
+                <input type="hidden" name="plan_id" value="{{ actual.id }}">
+                <input type="hidden" name="puesto_origen" value="{{ puesto_nombre }}">
+                <div class="col-8">
+                    <input type="text" name="descripcion" class="form-control" placeholder="Describa la falla..." required>
+                </div>
+                <div class="col-4">
+                    <input type="file" name="foto_falla" class="form-control form-control-sm" accept="image/*">
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-outline-danger btn-sm w-100">REPORTAR NOVEDAD DE CALIDAD</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="mb-5">
+        <h6 class="text-uppercase text-primary">Próximos en Lista</h6>
+        <ul class="list-group list-group-flush">
+            {% for reg in futuros %}
+            <li class="list-group-item bg-transparent text-primary" style="opacity: 0.7;">
+                {{ reg.nro_chasis }} - {{ reg.modelo }} - PENDIENTE
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <a href="/logout" class="btn btn-light w-100 mb-4 border">Cerrar Sesión</a>
+</div>
+</body>
+</html>

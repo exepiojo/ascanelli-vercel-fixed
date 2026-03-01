@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Selección de Puesto - Ascanelli</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <link rel="shortcut icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .btn-step { border-width: 2px; font-weight: bold; text-transform: uppercase; transition: all 0.2s; }
+        .btn-sector { height: 100px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+        .badge-step { width: 35px; height: 35px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-right: 10px; font-weight: bold; }
+        hr { opacity: 0.1; }
+        .navbar-brand { display: flex; align-items: center; gap: 10px; }
+        .navbar-logo { width: 35px; height: 35px; object-fit: contain; }
+        @media (max-width: 768px) {
+            .navbar-logo { width: 28px; height: 28px; }
+            .navbar-brand { font-size: 14px; }
+        }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-dark bg-dark mb-4 shadow">
+    <div class="container-fluid">
+        <span class="navbar-brand mb-0 h1">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Ascanelli" class="navbar-logo">
+            ASCANELLI - PRODUCCIÓN
+        </span>
+        <div class="d-flex align-items-center gap-2">
+            <span class="text-light me-3 small">Operario: <strong>{{ current_user.nombre }}</strong></span>
+            <a href="{{ url_for('seleccion_admin') }}" class="btn btn-outline-light btn-sm me-2">Volver</a>
+            <a href="/logout" class="btn btn-outline-danger btn-sm">Salir</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container text-center mt-4">
+    <h2 class="fw-bold mb-5 text-dark">CONTROL DE AVANCE</h2>
+
+    <div id="paso1" class="mb-5">
+        <h4 class="mb-4 text-secondary">
+            <span class="badge-step bg-dark text-white">1</span> ¿SOBRE QUÉ IMPLEMENTO VAS A TRABAJAR?
+        </h4>
+        <div class="row justify-content-center gap-3">
+            <div class="col-md-2">
+                <button onclick="seleccionarImp('TOLVA', this)" class="btn btn-outline-dark btn-lg btn-step w-100 py-4 shadow-sm">TOLVA</button>
+            </div>
+            <div class="col-md-2">
+                <button onclick="seleccionarImp('MIXER', this)" class="btn btn-outline-dark btn-lg btn-step w-100 py-4 shadow-sm">MIXER</button>
+            </div>
+            <div class="col-md-2">
+                <button onclick="seleccionarImp('EMBOLSADORA', this)" class="btn btn-outline-dark btn-lg btn-step w-100 py-4 shadow-sm">EMBOLSADORA</button>
+            </div>
+            <div class="col-md-2">
+                <button onclick="seleccionarImp('ATT', this)" class="btn btn-outline-dark btn-lg btn-step w-100 py-4 shadow-sm">ATT</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="paso2" class="mb-5" style="display:none;">
+        <hr class="my-5">
+        <h4 class="mb-4 text-secondary">
+            <span class="badge-step bg-dark text-white">2</span> SELECCIONÁ EL SECTOR
+        </h4>
+        <div class="row justify-content-center gap-3">
+            <div class="col-md-3">
+                <button onclick="seleccionarSector('SOLDADURA', this)" class="btn btn-outline-danger btn-lg btn-step btn-sector w-100 shadow-sm">🔥 SOLDADURA</button>
+            </div>
+            <div class="col-md-3">
+                <button onclick="seleccionarSector('PINTURA', this)" class="btn btn-outline-success btn-lg btn-step btn-sector w-100 shadow-sm">🎨 PINTURA</button>
+            </div>
+            <div class="col-md-3">
+                <button onclick="seleccionarSector('MONTAJE', this)" class="btn btn-outline-primary btn-lg btn-step btn-sector w-100 shadow-sm">🔹 MONTAJE</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="paso3" class="mb-5 pb-5" style="display:none;">
+        <hr class="my-5">
+        <h4 class="mb-4 text-secondary">
+            <span class="badge-step bg-dark text-white">3</span> SELECCIONÁ EL PUESTO ESPECÍFICO
+        </h4>
+        <div id="contenedorPuestos" class="d-flex justify-content-center flex-wrap gap-3">
+            </div>
+    </div>
+</div>
+
+<script>
+    let impSel = "";
+    let sectorSel = "";
+    
+    const puestosData = {
+        'SOLDADURA': ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9'],
+        'PINTURA': ['LAVADO', 'PINTURA'],
+        'MONTAJE': ['M1', 'M2', 'M3', 'M4', 'M5']
+    };
+
+    function seleccionarImp(imp, btn) {
+        impSel = imp;
+        document.querySelectorAll('#paso1 .btn').forEach(b => {
+            b.classList.remove('btn-dark', 'text-white');
+            b.classList.add('btn-outline-dark');
+        });
+        btn.classList.remove('btn-outline-dark');
+        btn.classList.add('btn-dark', 'text-white');
+
+        // Si es MIXER, redirigir a selección de modelos
+        if (imp === 'MIXER') {
+            window.location.href = '/operario/seleccion_mixer';
+            return;
+        }
+
+        const p2 = document.getElementById('paso2');
+        p2.style.display = 'block';
+        window.scrollTo({ top: p2.offsetTop - 20, behavior: 'smooth' });
+    }
+
+    function seleccionarSector(sec, btn) {
+        sectorSel = sec;
+        
+        document.querySelectorAll('#paso2 .btn-step').forEach(b => {
+            b.classList.remove('btn-danger', 'btn-success', 'btn-primary', 'text-white');
+        });
+        
+        if(sec === 'SOLDADURA') btn.classList.add('btn-danger', 'text-white');
+        if(sec === 'PINTURA') btn.classList.add('btn-success', 'text-white');
+        if(sec === 'MONTAJE') btn.classList.add('btn-primary', 'text-white');
+
+        const cont = document.getElementById('contenedorPuestos');
+        cont.innerHTML = '';
+        
+        puestosData[sec].forEach(p => {
+            const btnPuesto = document.createElement('a');
+            btnPuesto.href = `/operario/ver_plan?implemento=${impSel}&sector=${sec}&puesto=${p}`;
+            btnPuesto.className = "btn btn-outline-secondary btn-lg px-5 py-3 fw-bold shadow-sm";
+            btnPuesto.innerText = p;
+            cont.appendChild(btnPuesto);
+        });
+
+        const p3 = document.getElementById('paso3');
+        p3.style.display = 'block';
+        window.scrollTo({ top: p3.offsetTop - 20, behavior: 'smooth' });
+    }
+</script>
+
+</body>
+</html>

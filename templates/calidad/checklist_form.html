@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nuevo Checklist - Sistema de Gestión de Calidad</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('calidad_checklists') }}">
+                <i class="fas fa-arrow-left me-2"></i>Nuevo Checklist
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a href="{{ url_for('logout') }}" class="nav-link">
+                    <i class="fas fa-sign-out-alt"></i> Salir
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Crear Nueva Plantilla de Checklist</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" id="checklistForm">
+                            <!-- Información General -->
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label">Nombre del Checklist *</label>
+                                    <input type="text" class="form-control" name="nombre" required 
+                                           placeholder="Ej: Auditoría de Seguridad Industrial">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Tipo *</label>
+                                    <select class="form-select" name="tipo" required>
+                                        <option value="">Seleccionar tipo</option>
+                                        <option value="AUDITORIA">Auditoría</option>
+                                        <option value="CALIDAD">Calidad</option>
+                                        <option value="SEGURIDAD">Seguridad</option>
+                                        <option value="PROCESO">Proceso</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label">Sector</label>
+                                    <select class="form-select" name="sector">
+                                        <option value="">General (todos los sectores)</option>
+                                        <option value="PRODUCCION">Producción</option>
+                                        <option value="CALIDAD">Calidad</option>
+                                        <option value="MANTENIMIENTO">Mantenimiento</option>
+                                        <option value="SOLDADURA">Soldadura</option>
+                                        <option value="PINTURA">Pintura</option>
+                                        <option value="MONTAJE">Montaje</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Frecuencia</label>
+                                    <select class="form-select" name="frecuencia">
+                                        <option value="">Sin frecuencia definida</option>
+                                        <option value="DIARIO">Diario</option>
+                                        <option value="SEMANAL">Semanal</option>
+                                        <option value="MENSUAL">Mensual</option>
+                                        <option value="TRIMESTRAL">Trimestral</option>
+                                        <option value="SEMESTRAL">Semestral</option>
+                                        <option value="ANUAL">Anual</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label">Descripción</label>
+                                <textarea class="form-control" name="descripcion" rows="3" 
+                                          placeholder="Describe el propósito y alcance de este checklist..."></textarea>
+                            </div>
+
+                            <!-- Items del Checklist -->
+                            <div class="border-top pt-4">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h6 class="mb-0">Items del Checklist</h6>
+                                    <button type="button" class="btn btn-sm btn-success" onclick="agregarItem()">
+                                        <i class="fas fa-plus me-1"></i>Agregar Item
+                                    </button>
+                                </div>
+
+                                <div id="itemsContainer">
+                                    <!-- Item 1 por defecto -->
+                                    <div class="item-card border rounded p-3 mb-3" data-item-num="1">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <h6 class="mb-0">Item #1</h6>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                    onclick="eliminarItem(this)" disabled>
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-12 mb-2">
+                                                <label class="form-label">Descripción *</label>
+                                                <input type="text" class="form-control" name="descripcion_1" required
+                                                       placeholder="Ej: El personal utiliza EPP adecuado">
+                                            </div>
+                                            <div class="col-md-4 mb-2">
+                                                <label class="form-label">Tipo de Respuesta</label>
+                                                <select class="form-select" name="tipo_1" onchange="actualizarTipoRespuesta(1)">
+                                                    <option value="SI/NO">Sí/No</option>
+                                                    <option value="TEXTO">Texto</option>
+                                                    <option value="NUMERICO">Numérico</option>
+                                                    <option value="FOTO">Foto</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-4 mb-2">
+                                                <label class="form-label">Puntos</label>
+                                                <input type="number" class="form-control" name="puntos_1" min="0" value="0">
+                                            </div>
+                                            <div class="col-md-4 mb-2">
+                                                <div class="form-check mt-4">
+                                                    <input class="form-check-input" type="checkbox" name="obligatorio_1" id="obligatorio_1" checked>
+                                                    <label class="form-check-label" for="obligatorio_1">
+                                                        Obligatorio
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <input type="hidden" name="item_count" id="itemCount" value="1">
+                            </div>
+
+                            <!-- Botones -->
+                            <div class="d-flex justify-content-between mt-4">
+                                <a href="{{ url_for('calidad_checklists') }}" class="btn btn-secondary">
+                                    <i class="fas fa-times me-1"></i>Cancelar
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-1"></i>Guardar Checklist
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let itemCount = 1;
+
+        function agregarItem() {
+            itemCount++;
+            const itemsContainer = document.getElementById('itemsContainer');
+            
+            const newItemHtml = `
+                <div class="item-card border rounded p-3 mb-3" data-item-num="${itemCount}">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h6 class="mb-0">Item #${itemCount}</h6>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarItem(this)">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    <div class="row">
+                        <div class="col-12 mb-2">
+                            <label class="form-label">Descripción *</label>
+                            <input type="text" class="form-control" name="descripcion_${itemCount}" required
+                                   placeholder="Ej: El personal utiliza EPP adecuado">
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">Tipo de Respuesta</label>
+                            <select class="form-select" name="tipo_${itemCount}" onchange="actualizarTipoRespuesta(${itemCount})">
+                                <option value="SI/NO">Sí/No</option>
+                                <option value="TEXTO">Texto</option>
+                                <option value="NUMERICO">Numérico</option>
+                                <option value="FOTO">Foto</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">Puntos</label>
+                            <input type="number" class="form-control" name="puntos_${itemCount}" min="0" value="0">
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <div class="form-check mt-4">
+                                <input class="form-check-input" type="checkbox" name="obligatorio_${itemCount}" id="obligatorio_${itemCount}" checked>
+                                <label class="form-check-label" for="obligatorio_${itemCount}">
+                                    Obligatorio
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            itemsContainer.insertAdjacentHTML('beforeend', newItemHtml);
+            document.getElementById('itemCount').value = itemCount;
+            
+            // Actualizar estado del botón eliminar del primer item
+            actualizarBotonesEliminar();
+        }
+
+        function eliminarItem(button) {
+            const itemCard = button.closest('.item-card');
+            itemCard.remove();
+            
+            // Reenumerar items restantes
+            reenumerarItems();
+            actualizarBotonesEliminar();
+        }
+
+        function reenumerarItems() {
+            const items = document.querySelectorAll('.item-card');
+            itemCount = items.length;
+            
+            items.forEach((item, index) => {
+                const num = index + 1;
+                item.setAttribute('data-item-num', num);
+                item.querySelector('h6').textContent = `Item #${num}`;
+            });
+            
+            document.getElementById('itemCount').value = itemCount;
+        }
+
+        function actualizarBotonesEliminar() {
+            const items = document.querySelectorAll('.item-card');
+            const botonesEliminar = document.querySelectorAll('.item-card button[onclick*="eliminarItem"]');
+            
+            botonesEliminar.forEach((boton, index) => {
+                boton.disabled = items.length <= 1;
+            });
+        }
+
+        function actualizarTipoRespuesta(itemNum) {
+            // Esta función puede expandirse para mostrar campos diferentes
+            // según el tipo de respuesta seleccionado
+            console.log(`Tipo de respuesta cambiado para item ${itemNum}`);
+        }
+
+        // Validación del formulario
+        document.getElementById('checklistForm').addEventListener('submit', function(e) {
+            const items = document.querySelectorAll('.item-card');
+            
+            if (items.length === 0) {
+                e.preventDefault();
+                alert('Debe agregar al menos un item al checklist');
+                return;
+            }
+            
+            // Validar que todos los items tengan descripción
+            let valido = true;
+            items.forEach(item => {
+                const num = item.getAttribute('data-item-num');
+                const descripcion = document.querySelector(`input[name="descripcion_${num}"]`);
+                
+                if (!descripcion.value.trim()) {
+                    descripcion.classList.add('is-invalid');
+                    valido = false;
+                } else {
+                    descripcion.classList.remove('is-invalid');
+                }
+            });
+            
+            if (!valido) {
+                e.preventDefault();
+                alert('Todos los items deben tener una descripción');
+            }
+        });
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', function() {
+            actualizarBotonesEliminar();
+        });
+    </script>
+</body>
+</html>

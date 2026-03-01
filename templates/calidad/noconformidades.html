@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>No Conformidades - Sistema de Gestión de Calidad</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .nc-card {
+            transition: transform 0.2s;
+            border-left: 4px solid;
+        }
+        .nc-card:hover {
+            transform: translateY(-2px);
+        }
+        .nc-leve { border-left-color: #28a745; }
+        .nc-moderado { border-left-color: #ffc107; }
+        .nc-grave { border-left-color: #fd7e14; }
+        .nc-critico { border-left-color: #dc3545; }
+        
+        .estado-badge {
+            font-size: 0.75rem;
+        }
+        
+        .timeline-item {
+            position: relative;
+            padding-left: 30px;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 8px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #6c757d;
+        }
+        .timeline-item::after {
+            content: '';
+            position: absolute;
+            left: 11px;
+            top: 16px;
+            width: 1px;
+            height: calc(100% - 8px);
+            background: #dee2e6;
+        }
+        .timeline-item:last-child::after {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('calidad_dashboard') }}">
+                <i class="fas fa-arrow-left me-2"></i>No Conformidades
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a href="{{ url_for('logout') }}" class="nav-link">
+                    <i class="fas fa-sign-out-alt"></i> Salir
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1 class="h3 mb-0">No Conformidades</h1>
+                        <p class="text-muted mb-0">Gestión de no conformidades y acciones correctivas</p>
+                    </div>
+                    <a href="{{ url_for('calidad_noconformidad_nueva') }}" class="btn btn-danger">
+                        <i class="fas fa-plus me-1"></i>Nueva No Conformidad
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Estadísticas Rápidas -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h4 class="text-danger">{{ nc_list|length }}</h4>
+                        <small class="text-muted">Total NC</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h4 class="text-warning">{{ nc_list|selectattr('estado', 'in', ['ABIERTA', 'EN_ANALISIS'])|list|length }}</h4>
+                        <small class="text-muted">Abiertas</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h4 class="text-info">{{ nc_list|selectattr('estado', 'equalto', 'EN_PROCESO')|list|length }}</h4>
+                        <small class="text-muted">En Proceso</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h4 class="text-success">{{ nc_list|selectattr('estado', 'equalto', 'CERRADA')|list|length }}</h4>
+                        <small class="text-muted">Cerradas</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <label class="form-label">Estado</label>
+                                <select class="form-select" id="filtroEstado">
+                                    <option value="">Todos los estados</option>
+                                    <option value="ABIERTA">Abierta</option>
+                                    <option value="EN_ANALISIS">En Análisis</option>
+                                    <option value="EN_PROCESO">En Proceso</option>
+                                    <option value="VERIFICACION">Verificación</option>
+                                    <option value="CERRADA">Cerrada</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Gravedad</label>
+                                <select class="form-select" id="filtroGravedad">
+                                    <option value="">Todos los niveles</option>
+                                    <option value="LEVE">Leve</option>
+                                    <option value="MODERADO">Moderado</option>
+                                    <option value="GRAVE">Grave</option>
+                                    <option value="CRITICO">Crítico</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Tipo</label>
+                                <select class="form-select" id="filtroTipo">
+                                    <option value="">Todos los tipos</option>
+                                    <option value="PRODUCTO">Producto</option>
+                                    <option value="PROCESO">Proceso</option>
+                                    <option value="DOCUMENTO">Documento</option>
+                                    <option value="SEGURIDAD">Seguridad</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Sector</label>
+                                <select class="form-select" id="filtroSector">
+                                    <option value="">Todos los sectores</option>
+                                    <option value="PRODUCCION">Producción</option>
+                                    <option value="CALIDAD">Calidad</option>
+                                    <option value="SOLDADURA">Soldadura</option>
+                                    <option value="PINTURA">Pintura</option>
+                                    <option value="MONTAJE">Montaje</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de No Conformidades -->
+        <div class="row">
+            {% if nc_list %}
+                {% for nc in nc_list %}
+                <div class="col-lg-6 mb-4 nc-item" 
+                     data-estado="{{ nc.estado }}" 
+                     data-gravedad="{{ nc.gravedad }}" 
+                     data-tipo="{{ nc.tipo }}" 
+                     data-sector="{{ nc.sector }}">
+                    <div class="card nc-card nc-{{ nc.gravedad.lower() }} h-100">
+                        <div class="card-header d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="d-flex align-items-center gap-2 mb-1">
+                                    <h6 class="mb-0">{{ nc.codigo }}</h6>
+                                    <span class="badge estado-badge bg-{{ 
+                                        'danger' if nc.gravedad == 'CRITICO' else 
+                                        'warning' if nc.gravedad == 'GRAVE' else 
+                                        'info' if nc.gravedad == 'MODERADO' else 'success' 
+                                    }}">{{ nc.gravedad }}</span>
+                                </div>
+                                <h5 class="mb-1">{{ nc.titulo }}</h5>
+                                <small class="text-muted">{{ nc.tipo }} - {{ nc.sector or 'Sin sector' }}</small>
+                            </div>
+                            <div>
+                                {% if nc.estado == 'CERRADA' %}
+                                <span class="badge bg-success">Cerrada</span>
+                                {% elif nc.estado == 'VERIFICACION' %}
+                                <span class="badge bg-info">Verificación</span>
+                                {% elif nc.estado == 'EN_PROCESO' %}
+                                <span class="badge bg-warning">En Proceso</span>
+                                {% elif nc.estado == 'EN_ANALISIS' %}
+                                <span class="badge bg-primary">Análisis</span>
+                                {% else %}
+                                <span class="badge bg-danger">Abierta</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small">{{ nc.descripcion[:150] }}{% if nc.description|length > 150 %}...{% endif %}</p>
+                            
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <small class="text-muted">Detectado por:</small><br>
+                                    <strong>{{ nc.detectado_por }}</strong>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted">Fecha:</small><br>
+                                    <strong>{{ nc.fecha_deteccion.strftime('%d/%m/%Y') }}</strong>
+                                </div>
+                            </div>
+
+                            {% if nc.acciones %}
+                            <div class="mb-3">
+                                <small class="text-muted">Acciones:</small>
+                                <div class="mt-1">
+                                    {% for accion in nc.acciones %}
+                                    <span class="badge bg-secondary me-1">{{ accion.tipo }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            {% if nc.fecha_limite_analisis %}
+                            <div class="mb-2">
+                                <small class="text-muted">Límite análisis:</small>
+                                <span class="text-warning">
+                                    <i class="fas fa-clock"></i> {{ nc.fecha_limite_analisis.strftime('%d/%m/%Y') }}
+                                </span>
+                            </div>
+                            {% endif %}
+
+                            <div class="d-flex justify-content-between">
+                                <a href="{{ url_for('calidad_noconformidad_detalle', id=nc.id) }}" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-eye me-1"></i>Ver Detalle
+                                </a>
+                                <div class="btn-group" role="group">
+                                    {% if nc.estado not in ['CERRADA', 'VERIFICACION'] %}
+                                    <a href="{{ url_for('calidad_accion_nueva', nc_id=nc.id) }}" class="btn btn-success btn-sm">
+                                        <i class="fas fa-plus me-1"></i>Acción
+                                    </a>
+                                    {% endif %}
+                                    <button class="btn btn-outline-secondary btn-sm" onclick="verTimeline({{ nc.id }})">
+                                        <i class="fas fa-history"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-12">
+                    <div class="text-center py-5">
+                        <i class="fas fa-exclamation-triangle fa-4x text-muted mb-3"></i>
+                        <h4>No hay no conformidades registradas</h4>
+                        <p class="text-muted">Registra tu primera no conformidad para comenzar el proceso de mejora continua</p>
+                        <a href="{{ url_for('calidad_noconformidad_nueva') }}" class="btn btn-danger">
+                            <i class="fas fa-plus me-1"></i>Crear No Conformidad
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Modal Timeline -->
+    <div class="modal fade" id="timelineModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Timeline de No Conformidad</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="timelineContent">
+                        <!-- Timeline dinámico -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Datos simulados de timeline (en producción vendrían de la BD)
+        const timelineData = {
+            {% for nc in nc_list %}
+            {{ nc.id }}: [
+                {
+                    fecha: "{{ nc.fecha_deteccion.strftime('%d/%m/%Y %H:%M') }}",
+                    evento: "Detección",
+                    descripcion: "NC detectada por {{ nc.detectado_por }}",
+                    tipo: "deteccion"
+                }
+                {% if nc.acciones %}
+                {% for accion in nc.acciones %}
+                ,{
+                    fecha: "{{ accion.fecha_asignacion.strftime('%d/%m/%Y %H:%M') }}",
+                    evento: "Asignación de Acción",
+                    descripcion: "{{ accion.tipo }} asignada a {{ accion.responsable }}",
+                    tipo: "accion"
+                }
+                {% endfor %}
+                {% endif %}
+                {% if nc.fecha_cierre %}
+                ,{
+                    fecha: "{{ nc.fecha_cierre.strftime('%d/%m/%Y %H:%M') }}",
+                    evento: "Cierre",
+                    descripcion: "No conformidad cerrada",
+                    tipo: "cierre"
+                }
+                {% endif %}
+            ]{% if not loop.last %},{% endif %}
+            {% endfor %}
+        };
+
+        function verTimeline(ncId) {
+            const timeline = timelineData[ncId] || [];
+            const timelineContent = document.getElementById('timelineContent');
+            
+            if (timeline.length === 0) {
+                timelineContent.innerHTML = '<p class="text-muted">No hay eventos registrados</p>';
+            } else {
+                let html = '<div class="timeline">';
+                timeline.forEach(evento => {
+                    const iconClass = evento.tipo === 'deteccion' ? 'fa-exclamation-triangle text-danger' :
+                                     evento.tipo === 'accion' ? 'fa-tools text-warning' :
+                                     evento.tipo === 'cierre' ? 'fa-check text-success' : 'fa-info-circle text-info';
+                    
+                    html += `
+                        <div class="timeline-item mb-3">
+                            <div class="d-flex">
+                                <i class="fas ${iconClass} me-3 mt-1"></i>
+                                <div>
+                                    <h6 class="mb-1">${evento.evento}</h6>
+                                    <small class="text-muted">${evento.fecha}</small>
+                                    <p class="mb-0 small">${evento.descripcion}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                timelineContent.innerHTML = html;
+            }
+            
+            new bootstrap.Modal(document.getElementById('timelineModal')).show();
+        }
+
+        // Filtros
+        function aplicarFiltros() {
+            const estado = document.getElementById('filtroEstado').value;
+            const gravedad = document.getElementById('filtroGravedad').value;
+            const tipo = document.getElementById('filtroTipo').value;
+            const sector = document.getElementById('filtroSector').value;
+            
+            const items = document.querySelectorAll('.nc-item');
+            
+            items.forEach(item => {
+                let mostrar = true;
+                
+                if (estado && item.dataset.estado !== estado) mostrar = false;
+                if (gravedad && item.dataset.gravedad !== gravedad) mostrar = false;
+                if (tipo && item.dataset.tipo !== tipo) mostrar = false;
+                if (sector && item.dataset.sector !== sector) mostrar = false;
+                
+                item.style.display = mostrar ? 'block' : 'none';
+            });
+        }
+
+        // Event listeners para filtros
+        document.getElementById('filtroEstado').addEventListener('change', aplicarFiltros);
+        document.getElementById('filtroGravedad').addEventListener('change', aplicarFiltros);
+        document.getElementById('filtroTipo').addEventListener('change', aplicarFiltros);
+        document.getElementById('filtroSector').addEventListener('change', aplicarFiltros);
+    </script>
+</body>
+</html>
