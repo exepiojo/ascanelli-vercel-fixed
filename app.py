@@ -15,6 +15,11 @@ app = Flask(__name__)
 # Usar SECRET_KEY desde variables de entorno o generar una por defecto
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'ascanelli_secret_key_123')
 
+# Configuración para Vercel/serverless
+if os.environ.get('VERCEL'):
+    app.config['DEBUG'] = False
+    app.config['TESTING'] = False
+
 # Deshabilitar caché para desarrollo
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 @app.after_request
@@ -32,14 +37,15 @@ if database_url:
     if database_url.startswith("postgres://"):
         database_url = database_url.replace("postgres://", "postgresql://", 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
-    print(f" Conectando a base de datos en la nube (Producción)")
+    print(f"✅ Conectando a base de datos en la nube (Producción)")
+    print(f"🔗 URL: {database_url[:50]}...")
 else:
     # Desarrollo local: SQLite
     instance_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance')
     os.makedirs(instance_folder, exist_ok=True)
     db_path = os.path.join(instance_folder, 'ascanelli.db')
     app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
-    print(" Conectando a SQLite (Desarrollo Local)")
+    print("📁 Conectando a SQLite (Desarrollo Local)")
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
