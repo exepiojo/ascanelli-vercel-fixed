@@ -4126,10 +4126,9 @@ def logout():
 # ===== INICIALIZACIÓN AUTOMÁTICA DE BD =====
 def inicializar_base_datos():
     """Inicializa la base de datos al arrancar la aplicación"""
-    # Solo inicializar en desarrollo local, no en producción
+    # SIEMPRE omitir en producción - forzar salida inmediata
     if os.environ.get('DATABASE_URL'):
         print("🚀 Producción detectada - Omitiendo inicialización automática")
-        print("💡 La base de datos debe ser creada manualmente en Neon.tech")
         return
         
     from sqlalchemy import text
