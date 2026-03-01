@@ -6412,8 +6412,12 @@ def admin_pcp_actualizar_cliente_chasis():
 
 # --- Sección 9: Inicialización de Base de Datos --------------------------------------------
 
-with app.app_context():
-    inicializar_base_datos()
+# Solo inicializar en desarrollo local, no en producción (Vercel/Neon)
+if not os.environ.get('DATABASE_URL'):
+    with app.app_context():
+        inicializar_base_datos()
+else:
+    print("🚀 Producción detectada - Omitiendo inicialización automática de base de datos")
 
 if __name__ == '__main__':
     # Para desarrollo local - siempre en DEBUG si no estamos en Render
