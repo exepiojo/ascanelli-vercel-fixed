@@ -4126,19 +4126,27 @@ def logout():
 # ===== INICIALIZACIÓN AUTOMÁTICA DE BD =====
 def inicializar_base_datos():
     """Inicializa la base de datos al arrancar la aplicación"""
+    # Solo inicializar en desarrollo local, no en producción
+    if os.environ.get('DATABASE_URL'):
+        print("🚀 Producción detectada - Omitiendo inicialización automática")
+        print("💡 La base de datos debe ser creada manualmente en Neon.tech")
+        return
+        
     from sqlalchemy import text
+    
+    print("📁 Desarrollo local detectado - Inicializando SQLite...")
     
     # 1. Crear todas las tablas
     db.create_all()
     
-    # 2. Verificar si la tabla usuario existe y tiene la estructura correcta
+    # 2. Verificar si la tabla usuario existe y tiene la estructura correcta (SQLite)
     try:
-        # Verificar si existe la tabla usuario
+        # Verificar si existe la tabla usuario (SQLite local)
         result = db.session.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name='usuario'"))
         tabla_usuario = result.fetchone()
         
         if tabla_usuario:
-            # Verificar si tiene la columna legajo
+            # Verificar si tiene la columna legajo (SQLite)
             result = db.session.execute(text("PRAGMA table_info(usuario)"))
             columnas = result.fetchall()
             tiene_legajo = any(col[1] == 'legajo' for col in columnas)
@@ -4171,13 +4179,18 @@ def inicializar_base_datos():
         print(f"Error en inicialización general: {e}")
     
     # 3. Crear matriz de playón (80 celdas) si no existe
-    if not CeldaPlayon.query.first():
-        filas = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
-        for letra in filas:
-            for numero in range(1, 11):
-                codigo = f"{letra}-{numero}"
-                db.session.add(CeldaPlayon(codigo=codigo, estado='LIBRE'))
-        db.session.commit()
+    try:
+        if not CeldaPlayon.query.first():
+            filas = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+            for letra in filas:
+                for numero in range(1, 11):
+                    codigo = f"{letra}-{numero}"
+                    db.session.add(CeldaPlayon(codigo=codigo, estado='LIBRE'))
+            db.session.commit()
+            print("Matriz de playón creada")
+    except Exception as e:
+        print(f"Error creando matriz de playón: {e}")
+        db.session.rollback()
     
     # 4. Agregar columnas faltantes si no existen (para SQLite)
     try:
