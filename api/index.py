@@ -3,7 +3,7 @@ import sys
 import os
 
 # Agregar el directorio actual al path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Importar la app Flask
 from app import app
