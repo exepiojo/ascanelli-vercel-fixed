@@ -1,10 +1,9 @@
-# COMPLETAMENTE DESHABILITADO PARA VERCEL
 import os
 from flask import Flask, render_template, redirect, url_for, request, flash, jsonify, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.utils import secure_filename
-from sqlalchemy import func
+from sqlalchemy import func, text
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
@@ -79,6 +78,32 @@ def index():
 def login():
     return render_template('login.html')
 
+@app.route('/login', methods=['POST'])
+def login_post():
+    if request.method == 'POST':
+        legajo = request.form.get('legajo')
+        pin_secreto = request.form.get('pin_secreto')
+        
+        if not legajo or not pin_secreto:
+            flash('Por favor completa todos los campos', 'error')
+            return redirect(url_for('login'))
+        
+        usuario = Usuario.query.filter_by(legajo=legajo, pin_secreto=pin_secreto).first()
+        
+        if usuario:
+            login_user(usuario)
+            return redirect(url_for('dashboard'))
+        else:
+            flash('Credenciales incorrectas', 'error')
+            return redirect(url_for('login'))
+    
+    return render_template('login.html')
+
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    return render_template('dashboard.html', usuario_actual=current_user)
+
 @app.route('/logout')
 def logout():
     logout_user()
@@ -90,7 +115,8 @@ def test():
     return "¡ASCANELLI WEB funcionando en Vercel! 🚀"
 
 # ===== INICIALIZACIÓN =====
-print("🚀 Producción detectada - Omitiendo inicialización automática")
+# NUNCA inicializar base de datos en producción
+print("🚀 App iniciada - Sin inicialización automática en producción")
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
